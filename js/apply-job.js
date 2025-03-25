@@ -9,9 +9,9 @@
  */
 
 (function() {
-  // Configuration - Replace these with your actual values
-  const AGENCY_SLUG = 'rover-recruitment'; // Replace with your Loxo agency slug
-  const BEARER_TOKEN = '8f4998dbcf4615d2c28f8063040d916e49e44d2aca927b5abbef53d7746754e31e49f4aa385ff40368ec86ec1b1e95fddd23c5cb0e7f349259eab2ff83ec9f0f70185b2c56c962e1f432c619a1dad40c3bf76e157c6a6d18c9521452e8d72390c4de9e496fa87236728b9a77cb8a7bd5a0334f795745700526fdc83eb68a3afa'; // Replace with your Loxo bearer token or use environment variables
+  // Configuration
+// We'll use the Vercel proxy API instead of direct Loxo API access
+const API_BASE_URL = 'https://js-flame-sigma.vercel.app/api';
   
   // DOM element where the application form will be rendered
   const APPLICATION_FORM_CONTAINER_ID = 'job-application-form';
@@ -48,27 +48,21 @@
    * @returns {Promise<Object>} Job data
    */
   async function fetchJobDetail(jobId) {
-    try {
-      const response = await fetch(`https://app.loxo.co/api/${AGENCY_SLUG}/jobs/${jobId}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${BEARER_TOKEN}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`API request failed with status ${response.status}`);
-      }
-      
-      const data = await response.json();
-      return data.job || null;
-    } catch (error) {
-      console.error('Error fetching job details:', error);
-      renderError('Unable to load job details. Please try again later.');
-      return null;
+  try {
+    const response = await fetch(`${API_BASE_URL}/job-detail?id=${jobId}`);
+    
+    if (!response.ok) {
+      throw new Error(`API request failed with status ${response.status}`);
     }
+    
+    const data = await response.json();
+    return data.job || null;
+  } catch (error) {
+    console.error('Error fetching job details:', error);
+    renderError('Unable to load job details. Please try again later.');
+    return null;
   }
+}
   
   /**
    * Submits the job application to the Loxo API
@@ -77,27 +71,25 @@
    * @returns {Promise<Object>} Response data
    */
   async function submitApplication(jobId, formData) {
-    try {
-      const response = await fetch(`https://app.loxo.co/api/${AGENCY_SLUG}/jobs/${jobId}/apply`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${BEARER_TOKEN}`
-          // Note: Content-Type is automatically set by the browser when using FormData
-        },
-        body: formData
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.message || `API request failed with status ${response.status}`);
-      }
-      
-      return await response.json();
-    } catch (error) {
-      console.error('Error submitting application:', error);
-      throw error;
+  try {
+    // Use the new proxy API
+    const response = await fetch(`${API_BASE_URL}/apply-job?id=${jobId}`, {
+      method: 'POST',
+      // No need for Authorization header anymore - the proxy handles that
+      body: formData
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null);
+      throw new Error(errorData?.message || `API request failed with status ${response.status}`);
     }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error submitting application:', error);
+    throw error;
   }
+}
   
   /**
    * Renders the job application form
