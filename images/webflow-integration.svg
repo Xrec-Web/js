@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="500" viewBox="0 0 600 500">
+  <style>
+    .title { font: bold 24px sans-serif; fill: #333; }
+    .subtitle { font: 16px sans-serif; fill: #666; }
+    .box { fill: #f5f5f5; stroke: #ddd; stroke-width: 2; rx: 8; }
+    .code-box { fill: #282c34; stroke: #555; stroke-width: 2; rx: 4; }
+    .code-text { font: 13px monospace; fill: #eee; }
+    .step-circle { fill: #0066cc; stroke: none; }
+    .step-text { font: bold 14px sans-serif; fill: white; }
+    .step-title { font: bold 16px sans-serif; fill: #333; }
+    .step-desc { font: 13px sans-serif; fill: #666; }
+    .screenshot { fill: #fff; stroke: #ddd; stroke-width: 2; }
+  </style>
+  
+  <!-- Title -->
+  <text x="300" y="40" text-anchor="middle" class="title">Webflow Integration</text>
+  <text x="300" y="65" text-anchor="middle" class="subtitle">Adding Loxo scripts to your Webflow site</text>
+  
+  <!-- Step 1: Create Pages -->
+  <rect x="50" y="100" width="500" height="80" class="box" />
+  <circle cx="80" cy="140" r="15" class="step-circle" />
+  <text x="80" y="145" text-anchor="middle" class="step-text">1</text>
+  <text x="110" y="125" class="step-title">Create Pages in Webflow</text>
+  <text x="110" y="150" class="step-desc">Create three pages in Webflow:</text>
+  <text x="130" y="170" class="step-desc">• Jobs List Page  • Job Detail Page  • Job Application Page</text>
+  
+  <!-- Step 2: Add Containers -->
+  <rect x="50" y="190" width="500" height="70" class="box" />
+  <circle cx="80" cy="225" r="15" class="step-circle" />
+  <text x="80" y="230" text-anchor="middle" class="step-text">2</text>
+  <text x="110" y="215" class="step-title">Add Container Divs</text>
+  <text x="110" y="235" class="step-desc">Add div elements with specific IDs that your scripts will target</text>
+  
+  <!-- Code Example -->
+  <rect x="130" y="250" width="400" height="30" class="code-box" />
+  <text x="140" y="270" class="code-text">&lt;div id="jobs-container"&gt;&lt;/div&gt;</text>
+  
+  <!-- Step 3: Add Scripts -->
+  <rect x="50" y="290" width="500" height="70" class="box" />
+  <circle cx="80" cy="325" r="15" class="step-circle" />
+  <text x="80" y="330" text-anchor="middle" class="step-text">3</text>
+  <text x="110" y="315" class="step-title">Add Script Tags</text>
+  <text x="110" y="335" class="step-desc">In Webflow, add script tags pointing to your Vercel-hosted scripts</text>
+  
+  <!-- Code Example -->
+  <rect x="130" y="350" width="400" height="30" class="code-box" />
+  <text x="140" y="370" class="code-text">&lt;script src="https://your-scripts.vercel.app/js/jobs.js"&gt;&lt;/script&gt;</text>
+  
+  <!-- Step 4: Customize -->
+  <rect x="50" y="390" width="500" height="100" class="box" />
+  <circle cx="80" cy="440" r="15" class="step-circle" />
+  <text x="80" y="445" text-anchor="middle" class="step-text">4</text>
+  <text x="110" y="415" class="step-title">Design and Customize</text>
+  <text x="110" y="435" class="step-desc">Style your job listings with Webflow's designer</text>
+  <text x="110" y="455" class="step-desc">You can add additional CSS in the Webflow site settings</text>
+  <text x="110" y="475" class="step-desc">Test your integration to make sure everything is working correctly</text>
+</svg>
