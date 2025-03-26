@@ -33,7 +33,7 @@
       }
       
       const data = await response.json();
-      return data.jobs || [];
+      return data.results || [];
     } catch (error) {
       console.error('Error fetching jobs:', error);
       renderError('Unable to load job listings. Please try again later.');
