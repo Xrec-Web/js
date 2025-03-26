@@ -41,8 +41,67 @@
     }
   }
   
-  // The rest of your existing code can stay the same...
-  // This includes all your rendering functions like renderJobs(), renderJobsList(), etc.
+  /**
+ * Renders jobs to the container
+ * @param {Array} jobs - Array of job objects from Loxo API
+ */
+function renderJobs(jobs) {
+  const container = document.getElementById(JOBS_CONTAINER_ID);
+  
+  // Clear any loading indicators
+  container.innerHTML = '';
+  
+  // Create main jobs list container
+  const jobsListContainer = document.createElement('div');
+  jobsListContainer.className = 'jobs-list';
+  
+  // Loop through jobs and create elements
+  jobs.forEach(job => {
+    const jobElement = document.createElement('div');
+    jobElement.className = 'job-item';
+    
+    // Format date nicely
+    const publishDate = new Date(job.published_at || job.created_at);
+    const dateString = publishDate.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    
+    // Create job card content
+    jobElement.innerHTML = `
+      <div class="job-title">
+        <h3><a href="/job-detail?id=${job.id}">${job.title}</a></h3>
+      </div>
+      <div class="job-details">
+        <div class="job-location">${job.macro_address || 'Location not specified'}</div>
+        <div class="job-company">${job.company?.name || 'Company not specified'}</div>
+        <div class="job-date">Posted: ${dateString}</div>
+      </div>
+      <div class="job-apply">
+        <a href="/job-application?id=${job.id}" class="job-apply-button">Apply Now</a>
+      </div>
+    `;
+    
+    jobsListContainer.appendChild(jobElement);
+  });
+  
+  // Add jobs list to main container
+  container.appendChild(jobsListContainer);
+}
+
+/**
+ * Renders an error message
+ * @param {string} message - Error message to display
+ */
+function renderError(message) {
+  const container = document.getElementById(JOBS_CONTAINER_ID);
+  container.innerHTML = `
+    <div class="error-message" style="color: red; padding: 20px; text-align: center;">
+      <p>${message}</p>
+    </div>
+  `;
+}
   
   /**
    * Initializes the jobs listing
