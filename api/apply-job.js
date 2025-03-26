@@ -31,7 +31,7 @@ export default async function handler(req, res) {
   
   // Your Loxo credentials
   const AGENCY_SLUG = 'rover-recruitment'; // Replace with correct slug if needed
-  const BEARER_TOKEN = process.env.LOXO_BEARER_TOKEN;
+  const BEARER_TOKEN = process.env.LOXO_BEARER_TOKEN; // Will set this in Vercel
   
   try {
     // Get raw request body (for forwarding file uploads)
