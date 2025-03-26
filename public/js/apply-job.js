@@ -15,7 +15,7 @@
   const MAX_FILE_SIZE_MB = 5;
   
   // API endpoint (pointing to your Vercel proxy)
-  const API_BASE_URL = 'https://loxo.vercel.app/api';
+  const API_BASE_URL = 'https://js-flame-sigma.vercel.app/api';
   
   /**
    * Gets the job ID from the URL
