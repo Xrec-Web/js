@@ -17,7 +17,7 @@
   const DEFAULT_SORT = 'date';
   
   // API endpoint (this is the key change - pointing to your Vercel proxy)
-  const API_URL = 'https://js-flame-sigma.vercel.app/api';
+  const API_URL = 'https://js-flame-sigma.vercel.app/api/jobs';
   
   /**
    * Fetches jobs from our proxy API
