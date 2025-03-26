@@ -10,7 +10,7 @@
 
 // Configuration
 // We'll use the Vercel proxy API instead of direct Loxo API access
-const API_BASE_URL = 'https://js-flame-sigma.vercel.app/api';
+const API_BASE_URL = 'https://js-flame-sigma.vercel.app/api/job-detail.js';
 
   // DOM element where job details will be rendered
   const JOB_DETAIL_CONTAINER_ID = 'job-detail-container';
