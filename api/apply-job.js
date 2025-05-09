@@ -8,54 +8,49 @@ export const config = {
 };
 
 export default async function handler(req, res) {
-  // Set CORS headers to allow your Webflow site
+  // CORS headers for Webflow
   res.setHeader('Access-Control-Allow-Origin', 'https://loxo-buildout.webflow.io');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  
-  // Handle OPTIONS request (preflight)
+
   if (req.method === 'OPTIONS') {
-    return res.status(200).end();
+    return res.status(200).end(); // Preflight OK
   }
-  
-  // Only accept POST requests
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
-  
-  // Get job ID from query parameter
+
   const jobId = req.query.id;
   if (!jobId) {
-    return res.status(400).json({ error: 'Job ID is required' });
+    return res.status(400).json({ error: 'Missing job ID' });
   }
-  
-  // Your Loxo credentials
-  const AGENCY_SLUG = process.env.AGENCY_SLUG; // Replace with correct slug if needed
-  const BEARER_TOKEN = process.env.LOXO_BEARER_TOKEN; // Will set this in Vercel
-  
+
+  const AGENCY_SLUG = process.env.AGENCY_SLUG;
+  const BEARER_TOKEN = process.env.LOXO_BEARER_TOKEN;
+
   try {
-    // Get raw request body (for forwarding file uploads)
     const rawBody = await buffer(req);
-    
-    // Forward to Loxo API
+
     const response = await fetch(`https://app.loxo.co/api/${AGENCY_SLUG}/jobs/${jobId}/apply`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${BEARER_TOKEN}`,
         'Content-Type': req.headers['content-type'],
       },
-      body: rawBody
+      body: rawBody,
     });
-    
+
+    const result = await response.json();
+
     if (!response.ok) {
-      throw new Error(`API request failed with status ${response.status}`);
+      console.error('Loxo API error:', result);
+      return res.status(response.status).json({ error: 'Failed to apply', details: result });
     }
-    
-    // Return success response
-    const data = await response.json();
-    return res.status(200).json(data);
+
+    return res.status(200).json({ success: true, data: result });
   } catch (error) {
-    console.error('Error submitting application:', error);
-    return res.status(500).json({ error: 'Failed to submit application. Please try again later.' });
+    console.error('Proxy error:', error);
+    return res.status(500).json({ error: 'Server error' });
   }
 }
