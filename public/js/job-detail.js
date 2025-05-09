@@ -2,17 +2,18 @@
   const API_BASE_URL = 'https://js-flame-sigma.vercel.app/api';
   const APPLY_URL_PATTERN = '/apply-job?id={{jobId}}';
 
-  const REQUIRED_ELEMENTS = [
-    'job-title',
-    'job-location',
-    'job-category',
-    'job-type',
-    'job-salary',
-    'job-description',
-    'apply-link',
-    'share-button',
-    'job-detail-container',
-  ];
+  // Define expected elements, marking required vs optional
+  const EXPECTED_ELEMENTS = {
+    'job-title': true,
+    'job-location': false,
+    'job-category': false,
+    'job-type': false,
+    'job-salary': false,
+    'job-description': false,
+    'apply-link': false,
+    'share-button': false,
+    'job-detail-container': false,
+  };
 
   function getJobIdFromUrl() {
     const pathMatch = window.location.pathname.match(/\/jobs?\/([^\/]+)/i);
@@ -36,11 +37,14 @@
     }
   }
 
-  function validateRequiredElements() {
-    REQUIRED_ELEMENTS.forEach(attr => {
+  function validateExpectedElements() {
+    Object.entries(EXPECTED_ELEMENTS).forEach(([attr, isRequired]) => {
       const el = document.querySelector(`[data-element="${attr}"]`);
       if (!el) {
-        console.warn(`[WARNING] Missing expected element: data-element="${attr}"`);
+        const level = isRequired ? 'error' : 'warn';
+        console[level === 'error' ? 'error' : 'warn'](
+          `[${level.toUpperCase()}] Missing ${isRequired ? 'required' : 'optional'} element: data-element="${attr}"`
+        );
       } else {
         console.debug(`[DEBUG] Found element: data-element="${attr}"`);
       }
@@ -77,18 +81,16 @@
     }
 
     const shareBtn = document.querySelector('[data-element="share-button"]');
-    if (shareBtn) {
-      if (navigator.share) {
-        shareBtn.addEventListener('click', () => {
-          navigator.share({
-            title: job.title,
-            text: `Check out this job: ${job.title}`,
-            url: window.location.href,
-          }).catch(console.error);
-        });
-      } else {
-        shareBtn.style.display = 'none';
-      }
+    if (shareBtn && navigator.share) {
+      shareBtn.addEventListener('click', () => {
+        navigator.share({
+          title: job.title,
+          text: `Check out this job: ${job.title}`,
+          url: window.location.href,
+        }).catch(console.error);
+      });
+    } else if (shareBtn) {
+      shareBtn.style.display = 'none';
     }
 
     document.title = `${job.title} – Job Details`;
@@ -109,7 +111,7 @@
         </div>
       `;
     } else {
-      console.error('[ERROR] Missing container for job not found message (data-element="job-detail-container")');
+      console.warn('[WARNING] Could not show job-not-found message. Container missing (data-element="job-detail-container")');
     }
   }
 
@@ -118,12 +120,12 @@
     if (el) {
       el.innerHTML = `<div style="text-align:center; padding:40px;"><p>${msg}</p></div>`;
     } else {
-      console.error('[ERROR] Missing container for error message (data-element="job-detail-container")');
+      console.warn('[WARNING] Could not show error message. Container missing (data-element="job-detail-container")');
     }
   }
 
   async function initialize() {
-    validateRequiredElements();
+    validateExpectedElements();
 
     const jobId = getJobIdFromUrl();
     console.debug('[DEBUG] Job ID from URL:', jobId);
