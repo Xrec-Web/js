@@ -346,4 +346,4 @@ const API_BASE_URL = 'https://js-flame-sigma.vercel.app/api/jobs';
   } else {
     initialize();
   }
-})();
+
