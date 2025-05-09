@@ -1,69 +1,77 @@
-
+/**
+ * Loxo Job Detail Integration Script for Webflow
+ * Hosted version with DOM readiness + data-element support
+ */
 (function () {
   const API_BASE_URL = 'https://js-flame-sigma.vercel.app/api';
-  const SHOW_APPLY_BUTTON = true;
   const APPLY_URL_PATTERN = '/apply-job?id={{jobId}}';
 
   function getJobIdFromUrl() {
     const pathMatch = window.location.pathname.match(/\/jobs?\/([^\/]+)/i);
     if (pathMatch && pathMatch[1]) return pathMatch[1];
+
     const urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get('id') || urlParams.get('jobId') || null;
+    return urlParams.get('id') || urlParams.get('jobId');
   }
 
   async function fetchJobDetail(jobId) {
     try {
-      const res = await fetch(`${API_BASE_URL}/job-detail?id=${jobId}`);
-      if (!res.ok) throw new Error(`API error ${res.status}`);
-      const data = await res.json();
-      return data || null;
-    } catch (err) {
-      console.error('[LOXO JOB DETAIL] Fetch error:', err);
+      const response = await fetch(`${API_BASE_URL}/job-detail?id=${jobId}`);
+      if (!response.ok) throw new Error(`API request failed: ${response.status}`);
+      const data = await response.json();
+      return data.job || null;
+    } catch (error) {
+      console.error('[ERROR] Fetching job failed:', error);
       return null;
     }
   }
 
-  function renderJobDetail(job) {
-    const elements = {
-      'job-title': job.title,
-      'job-location': job.city ? `${job.city}, ${job.state_code || ''}` : '',
-      'job-category': job.category?.name,
-      'job-type': job.job_type?.name,
-      'job-salary': job.salary,
-      'job-description': job.description || 'No description available.',
-    };
-
-    for (const [attr, value] of Object.entries(elements)) {
-      const el = document.querySelector(`[data-element="${attr}"]`);
-      if (!el) {
-        console.warn(`[LOXO JOB DETAIL] Missing element: data-element="${attr}"`);
-        continue;
-      }
-      if (attr === 'job-description') {
-        el.innerHTML = value; // HTML content
-      } else {
-        el.innerText = value;
-      }
+  function setText(selector, value) {
+    const el = document.querySelector(`[data-element="${selector}"]`);
+    if (!el) {
+      console.warn(`[WARN] Element not found: data-element="${selector}"`);
+      return;
     }
+    el.innerText = value || '';
+  }
+
+  function setHTML(selector, value) {
+    const el = document.querySelector(`[data-element="${selector}"]`);
+    if (!el) {
+      console.warn(`[WARN] Element not found: data-element="${selector}"`);
+      return;
+    }
+    el.innerHTML = value || '';
+  }
+
+  function renderJobDetail(job) {
+    console.log('[INFO] Rendering job detail');
+
+    setText('job-title', job.title);
+    setText('job-location', job.city ? `${job.city}, ${job.state_code || ''}` : '');
+    setText('job-category', job.category?.name);
+    setText('job-type', job.job_type?.name);
+    setText('job-salary', job.salary);
+    setHTML('job-description', job.description || 'No description available.');
 
     const applyLink = document.querySelector('[data-element="apply-link"]');
     if (applyLink) {
-      applyLink.href = APPLY_URL_PATTERN.replace('{{jobId}}', job.id);
+      applyLink.setAttribute('href', APPLY_URL_PATTERN.replace('{{jobId}}', job.id));
     } else {
-      console.warn('[LOXO JOB DETAIL] Missing apply link element');
+      console.warn('[WARN] Element not found: data-element="apply-link"');
     }
 
-    const shareButton = document.querySelector('[data-element="share-button"]');
-    if (shareButton && navigator.share) {
-      shareButton.addEventListener('click', () => {
+    const shareBtn = document.querySelector('[data-element="share-button"]');
+    if (shareBtn && navigator.share) {
+      shareBtn.addEventListener('click', () => {
         navigator.share({
           title: job.title,
-          text: `Check out this job opportunity: ${job.title}`,
+          text: `Check out this job: ${job.title}`,
           url: window.location.href,
-        }).catch(err => console.error('[LOXO JOB DETAIL] Share failed:', err));
+        }).catch(err => console.error('[ERROR] Share failed:', err));
       });
-    } else if (shareButton) {
-      shareButton.style.display = 'none';
+    } else if (shareBtn) {
+      shareBtn.style.display = 'none';
     }
 
     document.title = `${job.title} – Job Details`;
@@ -76,44 +84,58 @@
   function renderJobNotFound() {
     const container = document.querySelector('[data-element="job-detail-container"]');
     if (!container) {
-      console.error('[LOXO JOB DETAIL] Missing job detail container');
+      console.error('[ERROR] Missing container: data-element="job-detail-container"');
       return;
     }
-
     container.innerHTML = `
-      <div class="job-not-found" style="text-align: center; padding: 40px 20px;">
+      <div style="text-align:center; padding:40px;">
         <h2>Job Not Found</h2>
-        <p>The job you're looking for doesn't exist or is no longer active.</p>
-        <a href="/jobs" class="back-to-jobs" style="display: inline-block; margin-top: 20px; padding: 10px 20px; background: #0066cc; color: white; border-radius: 4px; text-decoration: none;">Back to Jobs</a>
+        <p>The job you're looking for doesn't exist or has been removed.</p>
+        <a href="/jobs" class="apply-button">View All Jobs</a>
       </div>
     `;
   }
 
   async function initialize() {
+    console.log('[LOXO JOB DETAIL] Initializing...');
+
     const jobId = getJobIdFromUrl();
     if (!jobId) {
-      console.warn('[LOXO JOB DETAIL] No job ID in URL');
-      renderJobNotFound();
-      return;
+      console.error('[ERROR] No job ID found in URL');
+      return renderJobNotFound();
     }
 
-    const loadingContainer = document.querySelector('[data-element="job-detail-container"]');
-    if (loadingContainer) {
-      loadingContainer.innerHTML = `<p style="text-align:center; padding:40px;">Loading job details...</p>`;
-    }
-
+    console.log('[INFO] Found job ID:', jobId);
     const job = await fetchJobDetail(jobId);
+
     if (job) {
+      console.log('[INFO] Job data received:', job);
       renderJobDetail(job);
     } else {
+      console.warn('[WARN] No job found');
       renderJobNotFound();
     }
+  }
+
+  function waitForWebflowAndInitialize() {
+    const maxWaitTime = 5000;
+    const intervalTime = 100;
+    let waited = 0;
+
+    const interval = setInterval(() => {
+      const bodyReady = document.querySelector('body[data-wf-page]');
+      if (bodyReady || waited >= maxWaitTime) {
+        clearInterval(interval);
+        console.log('[LOXO JOB DETAIL] DOM ready, starting script');
+        initialize();
+      }
+      waited += intervalTime;
+    }, intervalTime);
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initialize);
+    document.addEventListener('DOMContentLoaded', waitForWebflowAndInitialize);
   } else {
-    initialize();
+    waitForWebflowAndInitialize();
   }
 })();
-
