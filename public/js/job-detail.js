@@ -7,7 +7,7 @@
  * 2. Add a <script> tag to your Webflow job detail page's custom code section pointing to this script
  * 3. Add a <div id="job-detail-container"></div> to your Webflow page where job details will be displayed
  */
-(function() {
+
 // Configuration
 // We'll use the Vercel proxy API instead of direct Loxo API access
 const API_BASE_URL = 'https://js-flame-sigma.vercel.app/api/jobs';
