@@ -30,7 +30,7 @@ export default async function handler(req, res) {
   }
   
   // Your Loxo credentials
-  const AGENCY_SLUG = 'rover-recruitment'; // Replace with correct slug if needed
+  const AGENCY_SLUG = 'skys-the-limit-staffing'; // Replace with correct slug if needed
   const BEARER_TOKEN = process.env.LOXO_BEARER_TOKEN; // Will set this in Vercel
   
   try {
