@@ -1,43 +1,66 @@
-(function() {
+(function () {
   const API_BASE_URL = 'https://js-flame-sigma.vercel.app/api';
   const APPLY_URL_PATTERN = '/apply-job?id={{jobId}}';
 
-  // Gets job ID from the URL (supports /jobs/:id or ?id=:id)
   function getJobIdFromUrl() {
     const pathMatch = window.location.pathname.match(/\/jobs?\/([^\/]+)/i);
-    if (pathMatch && pathMatch[1]) return pathMatch[1];
+    if (pathMatch && pathMatch[1]) {
+      console.log('[DEBUG] Job ID from path:', pathMatch[1]);
+      return pathMatch[1];
+    }
     const urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get('id') || urlParams.get('jobId');
+    const id = urlParams.get('id') || urlParams.get('jobId');
+    console.log('[DEBUG] Job ID from query param:', id);
+    return id;
   }
 
-  // Fetch job detail from proxy API
   async function fetchJobDetail(jobId) {
+    const url = `${API_BASE_URL}/job-detail?id=${jobId}`;
+    console.log('[DEBUG] Fetching job from:', url);
+
     try {
-      const response = await fetch(`${API_BASE_URL}/job-detail?id=${jobId}`);
+      const response = await fetch(url);
       if (!response.ok) throw new Error(`API Error: ${response.status}`);
       const data = await response.json();
+      console.log('[DEBUG] Job data:', data);
       return data.job || null;
     } catch (err) {
-      console.error('Error fetching job:', err);
+      console.error('[ERROR] Failed to fetch job:', err);
       renderError('Unable to load job details.');
       return null;
     }
   }
 
-  // Utility: Set text content
   function setText(selector, value) {
     const el = document.querySelector(`[data-element="${selector}"]`);
-    if (el && value) el.innerText = value;
+    if (!el) {
+      console.warn(`[WARN] Element not found: [data-element="${selector}"]`);
+      return;
+    }
+    if (!value) {
+      console.warn(`[WARN] No value provided for ${selector}`);
+      return;
+    }
+    console.log(`[DEBUG] Setting text [${selector}]:`, value);
+    el.innerText = value;
   }
 
-  // Utility: Set HTML content
   function setHTML(selector, value) {
     const el = document.querySelector(`[data-element="${selector}"]`);
-    if (el && value) el.innerHTML = value;
+    if (!el) {
+      console.warn(`[WARN] Element not found: [data-element="${selector}"]`);
+      return;
+    }
+    if (!value) {
+      console.warn(`[WARN] No value provided for ${selector}`);
+      return;
+    }
+    console.log(`[DEBUG] Setting HTML [${selector}]:`, value.slice(0, 60) + '...');
+    el.innerHTML = value;
   }
 
-  // Render job into existing elements
   function renderJobDetail(job) {
+    console.log('[DEBUG] Rendering job details...');
     setText('job-title', job.title);
     setText('job-location', job.city ? `${job.city}, ${job.state_code || ''}` : '');
     setText('job-category', job.category?.name);
@@ -48,6 +71,9 @@
     const applyLink = document.querySelector('[data-element="apply-link"]');
     if (applyLink) {
       applyLink.setAttribute('href', APPLY_URL_PATTERN.replace('{{jobId}}', job.id));
+      console.log('[DEBUG] Apply link set:', applyLink.getAttribute('href'));
+    } else {
+      console.warn('[WARN] Apply link not found');
     }
 
     const shareBtn = document.querySelector('[data-element="share-button"]');
@@ -59,19 +85,20 @@
           url: window.location.href,
         }).catch(console.error);
       });
+      console.log('[DEBUG] Share button initialized');
     } else if (shareBtn) {
       shareBtn.style.display = 'none';
+      console.log('[DEBUG] Share button hidden (no navigator.share)');
     }
 
-    // Optionally set meta tags
     document.title = `${job.title} – Job Details`;
     const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc && job.description_text) {
       metaDesc.setAttribute('content', job.description_text.slice(0, 160));
+      console.log('[DEBUG] Meta description set');
     }
   }
 
-  // Fallback message if job not found
   function renderJobNotFound() {
     const el = document.querySelector('[data-element="job-detail-container"]');
     if (el) {
@@ -82,18 +109,18 @@
           <a href="/jobs" class="apply-button">View All Jobs</a>
         </div>
       `;
+      console.log('[DEBUG] Rendered "Job Not Found" message');
     }
   }
 
-  // Error fallback
   function renderError(msg) {
     const el = document.querySelector('[data-element="job-detail-container"]');
     if (el) {
       el.innerHTML = `<div style="text-align:center; padding:40px;"><p>${msg}</p></div>`;
+      console.error('[ERROR] Rendered error:', msg);
     }
   }
 
-  // Initialize on page load
   async function initialize() {
     const jobId = getJobIdFromUrl();
     if (!jobId) {
@@ -109,7 +136,6 @@
     }
   }
 
-  // Run once DOM is ready
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initialize);
   } else {
