@@ -1,97 +1,133 @@
-(function () {
+/**
+ * Loxo Jobs Integration Script for Webflow
+ * This script fetches job listings from the Loxo API and displays them on a Webflow page.
+ */
+
+(function() {
+  // Configuration
+  // No longer need agency slug or bearer token in client-side code!
+  
+  // DOM element where jobs will be rendered
   const JOBS_CONTAINER_ID = 'jobs-container';
+  
+  // Optional configuration - Customize as needed
+  const JOBS_PER_PAGE = 10;
+  const ENABLE_SEARCH = true;
+  const ENABLE_FILTERING = true;
+  const DEFAULT_SORT = 'date';
+  
+  // API endpoint (this is the key change - pointing to your Vercel proxy)
   const API_URL = 'https://js-flame-sigma.vercel.app/api/jobs';
-
+  
+  /**
+   * Fetches jobs from our proxy API
+   * @returns {Promise<Array>} Jobs data
+   */
   async function fetchJobs() {
-    console.log('[Jobs Script] Fetching jobs from:', API_URL);
-
     try {
+      // No need for authorization headers - proxy handles that!
       const response = await fetch(API_URL);
-      console.log('[Jobs Script] API response status:', response.status);
-
-      if (!response.ok) throw new Error(`Fetch failed with status ${response.status}`);
+      
+      if (!response.ok) {
+        throw new Error(API request failed with status ${response.status});
+      }
       
       const data = await response.json();
-      console.log('[Jobs Script] Jobs fetched:', data.results?.length || 0);
-      
       return data.results || [];
     } catch (error) {
-      console.error('[Jobs Script] Error fetching jobs:', error);
+      console.error('Error fetching jobs:', error);
       renderError('Unable to load job listings. Please try again later.');
       return [];
     }
   }
-
-  function renderJobs(jobs) {
-    console.log('[Jobs Script] Rendering jobs...');
-
-    jobs.forEach((job, index) => {
-      const titleEl = document.querySelector(`[data-index="${index}"] [data-element="ur-link"]`);
-      const locationEl = document.querySelector(`[data-index="${index}"] [data-element="ur-location"]`);
-      const companyEl = document.querySelector(`[data-index="${index}"] [data-element="ur-company"]`);
-      const dateEl = document.querySelector(`[data-index="${index}"] [data-element="ur-date"]`);
-
-      if (!titleEl) {
-        console.warn(`[Jobs Script] No title element found for index ${index}`);
-      }
-
-      if (titleEl) {
-        titleEl.textContent = job.title || 'Untitled Job';
-        titleEl.setAttribute('href', `/job-detail?id=${job.id}`);
-        titleEl.setAttribute('data-job-id', job.id);
-      }
-
-      if (locationEl) {
-        locationEl.textContent = job.macro_address || 'Location not specified';
-      }
-
-      if (companyEl) {
-        companyEl.textContent = job.company?.name || 'Company not specified';
-      }
-
-      if (dateEl) {
-        const publishDate = new Date(job.published_at || job.created_at);
-        dateEl.textContent = publishDate.toLocaleDateString('en-US', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric'
-        });
-      }
+  
+  /**
+ * Renders jobs to the container
+ * @param {Array} jobs - Array of job objects from Loxo API
+ */
+function renderJobs(jobs) {
+  const container = document.getElementById(JOBS_CONTAINER_ID);
+  
+  // Clear any loading indicators
+  container.innerHTML = '';
+  
+  // Create main jobs list container
+  const jobsListContainer = document.createElement('div');
+  jobsListContainer.className = 'jobs-list';
+  
+  // Loop through jobs and create elements
+  jobs.forEach(job => {
+    const jobElement = document.createElement('div');
+    jobElement.className = 'job-item';
+    
+    // Format date nicely
+    const publishDate = new Date(job.published_at || job.created_at);
+    const dateString = publishDate.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
     });
+    
+    // Create job card content
+    jobElement.innerHTML = 
+      <div class="job-title">
+        <h3><a href="/job-detail?id=${job.id}">${job.title}</a></h3>
+      </div>
+      <div class="job-details">
+        <div class="job-location">${job.macro_address || 'Location not specified'}</div>
+        <div class="job-company">${job.company?.name || 'Company not specified'}</div>
+        <div class="job-date">Posted: ${dateString}</div>
+      </div>
+      <div class="job-apply">
+        <a href="/job-application?id=${job.id}" class="job-apply-button">Apply Now</a>
+      </div>
+    ;
+    
+    jobsListContainer.appendChild(jobElement);
+  });
+  
+  // Add jobs list to main container
+  container.appendChild(jobsListContainer);
+}
 
-    const allGroups = document.querySelectorAll('[data-index]');
-    for (let i = jobs.length; i < allGroups.length; i++) {
-      console.log(`[Jobs Script] Hiding extra job element at index ${i}`);
-      allGroups[i].style.display = 'none';
-    }
-
-    console.log('[Jobs Script] Job rendering complete.');
-  }
-
-  function renderError(message) {
-    const container = document.getElementById(JOBS_CONTAINER_ID);
-    if (container) {
-      container.innerHTML = `<div style="color:red; text-align:center; padding:20px;">${message}</div>`;
-    }
-  }
-
+/**
+ * Renders an error message
+ * @param {string} message - Error message to display
+ */
+function renderError(message) {
+  const container = document.getElementById(JOBS_CONTAINER_ID);
+  container.innerHTML = 
+    <div class="error-message" style="color: red; padding: 20px; text-align: center;">
+      <p>${message}</p>
+    </div>
+  ;
+}
+  
+  /**
+   * Initializes the jobs listing
+   */
   async function initialize() {
-    console.log('[Jobs Script] Initializing...');
+    // Check if container exists
     const container = document.getElementById(JOBS_CONTAINER_ID);
-
-    if (container) {
-      container.innerHTML = `<p style="text-align:center;">Loading job listings...</p>`;
-    } else {
-      console.warn(`[Jobs Script] Container with ID "${JOBS_CONTAINER_ID}" not found`);
+    if (!container) {
+      console.error(Container with ID "${JOBS_CONTAINER_ID}" not found.);
+      return;
     }
-
+    
+    // Show loading indicator
+    container.innerHTML = 
+      <div style="text-align: center; padding: 40px 20px;">
+        <p>Loading job listings...</p>
+      </div>
+    ;
+    
+    // Fetch and render jobs
     const jobs = await fetchJobs();
     if (jobs.length > 0) {
       renderJobs(jobs);
-    } else {
-      console.warn('[Jobs Script] No jobs to display.');
     }
   }
-
+  
+  // Run the script when the DOM is fully loaded
   document.addEventListener('DOMContentLoaded', initialize);
 })();
