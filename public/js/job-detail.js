@@ -1,4 +1,4 @@
-<script>
+
 (function () {
   const API_BASE_URL = 'https://js-flame-sigma.vercel.app/api';
   const SHOW_APPLY_BUTTON = true;
@@ -116,4 +116,4 @@
     initialize();
   }
 })();
-</script>
+
