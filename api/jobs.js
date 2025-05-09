@@ -11,7 +11,7 @@ export default async function handler(req, res) {
   }
   
   // Your Loxo credentials (use environment variables)
-  const AGENCY_SLUG = 'skys-the-limit-staffing'; // Replace with correct slug if needed
+  const AGENCY_SLUG = process.env.AGENCY_SLUG; // Replace with correct slug if needed
   const BEARER_TOKEN = process.env.LOXO_BEARER_TOKEN;
   
   try {
