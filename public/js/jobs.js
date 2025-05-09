@@ -1,37 +1,39 @@
 (function () {
-  // Configuration
-  const JOBS_CONTAINER_ID = 'jobs-container'; // Optional, can be used to show loading/errors
+  const JOBS_CONTAINER_ID = 'jobs-container';
   const API_URL = 'https://js-flame-sigma.vercel.app/api/jobs';
 
-  /**
-   * Fetches jobs from the API
-   * @returns {Promise<Array>} Jobs array
-   */
   async function fetchJobs() {
+    console.log('[Jobs Script] Fetching jobs from:', API_URL);
+
     try {
       const response = await fetch(API_URL);
-      if (!response.ok) throw new Error(`Status ${response.status}`);
+      console.log('[Jobs Script] API response status:', response.status);
+
+      if (!response.ok) throw new Error(`Fetch failed with status ${response.status}`);
+      
       const data = await response.json();
+      console.log('[Jobs Script] Jobs fetched:', data.results?.length || 0);
+      
       return data.results || [];
     } catch (error) {
-      console.error('Error fetching jobs:', error);
+      console.error('[Jobs Script] Error fetching jobs:', error);
       renderError('Unable to load job listings. Please try again later.');
       return [];
     }
   }
 
-  /**
-   * Renders jobs into DOM elements with matching data-element attributes
-   * @param {Array} jobs
-   */
   function renderJobs(jobs) {
-    // Select all grouped elements for each job (e.g., data-index="0", "1", etc.)
+    console.log('[Jobs Script] Rendering jobs...');
+
     jobs.forEach((job, index) => {
-      // Select elements by data-index for scoped replacement
       const titleEl = document.querySelector(`[data-index="${index}"] [data-element="ur-link"]`);
       const locationEl = document.querySelector(`[data-index="${index}"] [data-element="ur-location"]`);
       const companyEl = document.querySelector(`[data-index="${index}"] [data-element="ur-company"]`);
       const dateEl = document.querySelector(`[data-index="${index}"] [data-element="ur-date"]`);
+
+      if (!titleEl) {
+        console.warn(`[Jobs Script] No title element found for index ${index}`);
+      }
 
       if (titleEl) {
         titleEl.textContent = job.title || 'Untitled Job';
@@ -57,17 +59,15 @@
       }
     });
 
-    // Hide extra elements (if any exist beyond the number of jobs)
     const allGroups = document.querySelectorAll('[data-index]');
     for (let i = jobs.length; i < allGroups.length; i++) {
+      console.log(`[Jobs Script] Hiding extra job element at index ${i}`);
       allGroups[i].style.display = 'none';
     }
+
+    console.log('[Jobs Script] Job rendering complete.');
   }
 
-  /**
-   * Renders an error message
-   * @param {string} message
-   */
   function renderError(message) {
     const container = document.getElementById(JOBS_CONTAINER_ID);
     if (container) {
@@ -75,18 +75,21 @@
     }
   }
 
-  /**
-   * Initializes the script
-   */
   async function initialize() {
+    console.log('[Jobs Script] Initializing...');
     const container = document.getElementById(JOBS_CONTAINER_ID);
+
     if (container) {
       container.innerHTML = `<p style="text-align:center;">Loading job listings...</p>`;
+    } else {
+      console.warn(`[Jobs Script] Container with ID "${JOBS_CONTAINER_ID}" not found`);
     }
 
     const jobs = await fetchJobs();
     if (jobs.length > 0) {
       renderJobs(jobs);
+    } else {
+      console.warn('[Jobs Script] No jobs to display.');
     }
   }
 
