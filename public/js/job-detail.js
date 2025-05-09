@@ -1,7 +1,6 @@
 (function () {
   const API_BASE_URL = 'https://js-flame-sigma.vercel.app/api';
-  const APPLY_URL_PATTERN = '/apply-job?id={{jobId}}';
-  const SHOW_APPLY_BUTTON = true;
+  const APPLY_ENDPOINT = `${API_BASE_URL}/apply-job`;
 
   console.log('[LOXO JOB DETAIL] DOM ready, starting script');
 
@@ -33,27 +32,20 @@
   // --- Safely set text content ---
   function setText(selector, value) {
     const el = document.querySelector(`[data-element="${selector}"]`);
-    if (!el) {
-      console.warn(`[WARN] Missing element with data-element="${selector}"`);
-      return;
-    }
+    if (!el) return console.warn(`[WARN] Missing element with data-element="${selector}"]`);
     if (value) el.innerText = value;
   }
 
   // --- Safely set HTML content ---
   function setHTML(selector, html) {
     const el = document.querySelector(`[data-element="${selector}"]`);
-    if (!el) {
-      console.warn(`[WARN] Missing element with data-element="${selector}"`);
-      return;
-    }
+    if (!el) return console.warn(`[WARN] Missing element with data-element="${selector}"]`);
     el.innerHTML = html;
   }
 
   // --- Render job info into the page ---
   function renderJobDetail(job) {
     console.log('[LOXO JOB DETAIL] Rendering job:', job.title);
-
     setText('job-title', job.title);
     setText('job-location', job.city ? `${job.city}, ${job.state_code || ''}` : '');
     setText('job-category', job.category?.name);
@@ -61,15 +53,11 @@
     setText('job-salary', job.salary);
     setHTML('job-description', job.description || 'No description provided.');
 
-    // Apply button
     const applyBtn = document.querySelector('[data-element="apply-link"]');
     if (applyBtn) {
-      applyBtn.setAttribute('href', APPLY_URL_PATTERN.replace('{{jobId}}', job.id));
-    } else {
-      console.warn('[WARN] Missing element: data-element="apply-link"');
+      applyBtn.setAttribute('href', `?id=${job.id}#apply`);
     }
 
-    // Share button
     const shareBtn = document.querySelector('[data-element="share-button"]');
     if (shareBtn && navigator.share) {
       shareBtn.addEventListener('click', () => {
@@ -83,7 +71,6 @@
       shareBtn.style.display = 'none';
     }
 
-    // Set page title and meta description
     document.title = `${job.title} – Job Details`;
     const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc && job.description_text) {
@@ -94,11 +81,7 @@
   // --- Show fallback if job not found ---
   function renderJobNotFound() {
     const container = document.querySelector('[data-element="job-detail-container"]');
-    if (!container) {
-      console.error('[ERROR] No container found to render fallback.');
-      return;
-    }
-
+    if (!container) return console.error('[ERROR] No container found to render fallback.');
     container.innerHTML = `
       <div style="text-align:center; padding:40px;">
         <h2>Job Not Found</h2>
@@ -106,6 +89,77 @@
         <a href="/jobs" class="apply-button">View All Jobs</a>
       </div>
     `;
+  }
+
+  // --- Apply form handling ---
+  function setupApplyForm(jobId) {
+    const inputElement = document.querySelector('input[type="file"][name="fileToUpload"]');
+    const pond = FilePond.create(inputElement, {
+      credits: false,
+      name: 'fileToUpload',
+      storeAsFile: true,
+    });
+
+    Webflow.push(function () {
+      $('#wf-form-Form-Apply-Job').submit(async function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const file = pond.getFile();
+        if (!file) {
+          alert('Please upload a resume.');
+          return false;
+        }
+
+        const form = new FormData();
+        form.append('email', document.getElementById('Email').value);
+        form.append('name', document.getElementById('Name').value);
+        form.append('phone', document.getElementById('Phone').value);
+        form.append('linkedin', document.getElementById('LinkedIn').value);
+        form.append('resume', file.file, file.file.name);
+
+        $('.submit-button-apply-job')
+          .val('Please Wait...')
+          .css('cursor', 'not-allowed')
+          .attr('disabled', true);
+
+        try {
+          const response = await fetch(`${APPLY_ENDPOINT}?id=${jobId}`, {
+            method: 'POST',
+            body: form,
+          });
+
+          const responseData = await response.json();
+
+          if (response.ok && responseData.success !== false) {
+            $('.fs_modal-1_close-2').trigger('click');
+            Toastify({
+              text: 'Your application was successfully sent!',
+              duration: 2000,
+              gravity: 'top',
+              position: 'center',
+              style: { background: '#527853', color: '#FFFFFF' },
+            }).showToast();
+
+            pond.removeFile();
+            $('#wf-form-Form-Apply-Job').trigger('reset');
+          } else {
+            console.error('Failed to submit the form:', responseData);
+            alert('Failed to submit the form. Please try again.');
+          }
+        } catch (err) {
+          console.error('Error:', err);
+          alert('An error occurred while submitting the form. Please try again.');
+        } finally {
+          $('.submit-button-apply-job')
+            .val('Submit')
+            .css('cursor', 'pointer')
+            .attr('disabled', false);
+        }
+
+        return false;
+      });
+    });
   }
 
   // --- Main ---
@@ -123,13 +177,13 @@
 
     if (job && job.title) {
       renderJobDetail(job);
+      setupApplyForm(job.id);
     } else {
       console.warn('[WARN] No job found');
       renderJobNotFound();
     }
   }
 
-  // --- Run when ready ---
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initialize);
   } else {
