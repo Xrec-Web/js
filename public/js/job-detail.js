@@ -1,66 +1,75 @@
-/**
- * Loxo Job Detail Integration Script for Webflow
- * Hosted version with DOM readiness + data-element support
- */
 (function () {
   const API_BASE_URL = 'https://js-flame-sigma.vercel.app/api';
   const APPLY_URL_PATTERN = '/apply-job?id={{jobId}}';
+  const SHOW_APPLY_BUTTON = true;
 
+  console.log('[LOXO JOB DETAIL] DOM ready, starting script');
+
+  // --- Get job ID from URL ---
   function getJobIdFromUrl() {
     const pathMatch = window.location.pathname.match(/\/jobs?\/([^\/]+)/i);
     if (pathMatch && pathMatch[1]) return pathMatch[1];
 
     const urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get('id') || urlParams.get('jobId');
+    return urlParams.get('id') || urlParams.get('jobId') || null;
   }
 
+  // --- Fetch job from API ---
   async function fetchJobDetail(jobId) {
+    const url = `${API_BASE_URL}/job-detail?id=${jobId}`;
+    console.log('[LOXO JOB DETAIL] Fetching job from:', url);
+
     try {
-      const response = await fetch(`${API_BASE_URL}/job-detail?id=${jobId}`);
-      if (!response.ok) throw new Error(`API request failed: ${response.status}`);
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`Status ${response.status}`);
       const data = await response.json();
-      return data.job || null;
-    } catch (error) {
-      console.error('[ERROR] Fetching job failed:', error);
+      return data || null;
+    } catch (err) {
+      console.error('[ERROR] Could not fetch job:', err);
       return null;
     }
   }
 
+  // --- Safely set text content ---
   function setText(selector, value) {
     const el = document.querySelector(`[data-element="${selector}"]`);
     if (!el) {
-      console.warn(`[WARN] Element not found: data-element="${selector}"`);
+      console.warn(`[WARN] Missing element with data-element="${selector}"`);
       return;
     }
-    el.innerText = value || '';
+    if (value) el.innerText = value;
   }
 
-  function setHTML(selector, value) {
+  // --- Safely set HTML content ---
+  function setHTML(selector, html) {
     const el = document.querySelector(`[data-element="${selector}"]`);
     if (!el) {
-      console.warn(`[WARN] Element not found: data-element="${selector}"`);
+      console.warn(`[WARN] Missing element with data-element="${selector}"`);
       return;
     }
-    el.innerHTML = value || '';
+    el.innerHTML = html;
   }
 
+  // --- Render job info into the page ---
   function renderJobDetail(job) {
-    console.log('[INFO] Rendering job detail');
+    console.log('[LOXO JOB DETAIL] Rendering job:', job.title);
 
     setText('job-title', job.title);
     setText('job-location', job.city ? `${job.city}, ${job.state_code || ''}` : '');
     setText('job-category', job.category?.name);
     setText('job-type', job.job_type?.name);
     setText('job-salary', job.salary);
-    setHTML('job-description', job.description || 'No description available.');
+    setHTML('job-description', job.description || 'No description provided.');
 
-    const applyLink = document.querySelector('[data-element="apply-link"]');
-    if (applyLink) {
-      applyLink.setAttribute('href', APPLY_URL_PATTERN.replace('{{jobId}}', job.id));
+    // Apply button
+    const applyBtn = document.querySelector('[data-element="apply-link"]');
+    if (applyBtn) {
+      applyBtn.setAttribute('href', APPLY_URL_PATTERN.replace('{{jobId}}', job.id));
     } else {
-      console.warn('[WARN] Element not found: data-element="apply-link"');
+      console.warn('[WARN] Missing element: data-element="apply-link"');
     }
 
+    // Share button
     const shareBtn = document.querySelector('[data-element="share-button"]');
     if (shareBtn && navigator.share) {
       shareBtn.addEventListener('click', () => {
@@ -68,12 +77,13 @@
           title: job.title,
           text: `Check out this job: ${job.title}`,
           url: window.location.href,
-        }).catch(err => console.error('[ERROR] Share failed:', err));
+        }).catch(console.error);
       });
     } else if (shareBtn) {
       shareBtn.style.display = 'none';
     }
 
+    // Set page title and meta description
     document.title = `${job.title} – Job Details`;
     const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc && job.description_text) {
@@ -81,12 +91,14 @@
     }
   }
 
+  // --- Show fallback if job not found ---
   function renderJobNotFound() {
     const container = document.querySelector('[data-element="job-detail-container"]');
     if (!container) {
-      console.error('[ERROR] Missing container: data-element="job-detail-container"');
+      console.error('[ERROR] No container found to render fallback.');
       return;
     }
+
     container.innerHTML = `
       <div style="text-align:center; padding:40px;">
         <h2>Job Not Found</h2>
@@ -96,20 +108,20 @@
     `;
   }
 
+  // --- Main ---
   async function initialize() {
     console.log('[LOXO JOB DETAIL] Initializing...');
-
     const jobId = getJobIdFromUrl();
     if (!jobId) {
-      console.error('[ERROR] No job ID found in URL');
-      return renderJobNotFound();
+      console.warn('[WARN] No job ID found in URL');
+      renderJobNotFound();
+      return;
     }
 
     console.log('[INFO] Found job ID:', jobId);
     const job = await fetchJobDetail(jobId);
 
-    if (job) {
-      console.log('[INFO] Job data received:', job);
+    if (job && job.title) {
       renderJobDetail(job);
     } else {
       console.warn('[WARN] No job found');
@@ -117,25 +129,10 @@
     }
   }
 
-  function waitForWebflowAndInitialize() {
-    const maxWaitTime = 5000;
-    const intervalTime = 100;
-    let waited = 0;
-
-    const interval = setInterval(() => {
-      const bodyReady = document.querySelector('body[data-wf-page]');
-      if (bodyReady || waited >= maxWaitTime) {
-        clearInterval(interval);
-        console.log('[LOXO JOB DETAIL] DOM ready, starting script');
-        initialize();
-      }
-      waited += intervalTime;
-    }, intervalTime);
-  }
-
+  // --- Run when ready ---
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', waitForWebflowAndInitialize);
+    document.addEventListener('DOMContentLoaded', initialize);
   } else {
-    waitForWebflowAndInitialize();
+    initialize();
   }
 })();
