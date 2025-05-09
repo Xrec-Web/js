@@ -91,76 +91,114 @@
     `;
   }
 
-  // --- Apply form handling ---
-  function setupApplyForm(jobId) {
-    const inputElement = document.querySelector('input[type="file"][name="fileToUpload"]');
-    const pond = FilePond.create(inputElement, {
-      credits: false,
-      name: 'fileToUpload',
-      storeAsFile: true,
-    });
+  const queryString = window.location.search;
+const urlParams = new URLSearchParams(queryString);
+const jobId = urlParams.get('id');
 
-    Webflow.push(function () {
-      $('#wf-form-Form-Apply-Job').submit(async function (e) {
-        e.preventDefault();
-        e.stopPropagation();
+document.addEventListener('DOMContentLoaded', function () {
+  const inputElement = document.querySelector(
+    'input[type="file"][name="fileToUpload"]'
+  );
+  const pond = FilePond.create(inputElement, {
+    credits: false,
+    name: 'fileToUpload',
+    storeAsFile: true,
+  });
 
-        const file = pond.getFile();
-        if (!file) {
-          alert('Please upload a resume.');
-          return false;
+  Webflow.push(function () {
+    $('#wf-form-Form-Apply-Job').submit(async function (e) {
+      e.preventDefault(); // Prevent default form submission
+      e.stopPropagation(); // Stop the event from propagating further
+  
+      const file = pond.getFile();
+      if (!file) {
+        alert('Please upload a resume.');
+        return false; // Explicitly return false to stop further processing
+      }
+  
+      const form = new FormData();
+      form.append('email', document.getElementById('Email').value);
+      form.append('name', document.getElementById('Name').value);
+      form.append('phone', document.getElementById('Phone').value);
+      form.append('linkedin', document.getElementById('LinkedIn').value);
+      form.append('resume', file.file, file.file.name); // Ensure the file is sent with a name
+  
+      const options = {
+        method: 'POST',
+        headers: {
+          accept: 'application/json',
+          JobId: jobId, // Send Job ID via header
+        },
+        body: form,
+      };
+  
+      // Disable the submit button while processing
+      $('.submit-button-apply-job')
+        .val('Please Wait...')
+        .css('cursor', 'not-allowed')
+        .attr('disabled', true);
+  
+      try {
+        const response = await fetch(
+          'https://js-flame-sigma.vercel.app/api/apply-job.js',
+          options
+        );
+  
+        // Parse the response as JSON
+        const responseData = await response.json();
+  
+        // Check the success property in the parsed response
+        if (responseData.success === true) {
+          $('.fs_modal-1_close-2').trigger('click');
+          Toastify({
+            text: 'Your application was successfully sent!',
+            duration: 2000,
+            gravity: 'top',
+            position: 'center',
+            style: { background: '#527853', color: '#FFFFFF' },
+          }).showToast();
+  
+          pond.removeFile();
+          $('#wf-form-Form-Apply-Job').trigger('reset');
+        } else {
+          console.error('Failed to submit the form:', responseData);
+          alert('Failed to submit the form. Please try again.');
         }
-
-        const form = new FormData();
-        form.append('email', document.getElementById('Email').value);
-        form.append('name', document.getElementById('Name').value);
-        form.append('phone', document.getElementById('Phone').value);
-        form.append('linkedin', document.getElementById('LinkedIn').value);
-        form.append('resume', file.file, file.file.name);
-
+      } catch (err) {
+        console.error('Error:', err);
+        alert('An error occurred while submitting the form. Please try again.');
+      } finally {
+        // Re-enable the submit button after processing
         $('.submit-button-apply-job')
-          .val('Please Wait...')
-          .css('cursor', 'not-allowed')
-          .attr('disabled', true);
-
-        try {
-          const response = await fetch(`${APPLY_ENDPOINT}?id=${jobId}`, {
-            method: 'POST',
-            body: form,
-          });
-
-          const responseData = await response.json();
-
-          if (response.ok && responseData.success !== false) {
-            $('.fs_modal-1_close-2').trigger('click');
-            Toastify({
-              text: 'Your application was successfully sent!',
-              duration: 2000,
-              gravity: 'top',
-              position: 'center',
-              style: { background: '#527853', color: '#FFFFFF' },
-            }).showToast();
-
-            pond.removeFile();
-            $('#wf-form-Form-Apply-Job').trigger('reset');
-          } else {
-            console.error('Failed to submit the form:', responseData);
-            alert('Failed to submit the form. Please try again.');
-          }
-        } catch (err) {
-          console.error('Error:', err);
-          alert('An error occurred while submitting the form. Please try again.');
-        } finally {
-          $('.submit-button-apply-job')
-            .val('Submit')
-            .css('cursor', 'pointer')
-            .attr('disabled', false);
-        }
-
-        return false;
-      });
+          .val('Submit')
+          .css('cursor', 'pointer')
+          .attr('disabled', false);
+      }
+  
+      return false; // Explicitly return false to prevent Webflow behavior
     });
-  }
+  });
+});
+
+// Filepond Client
+const forms = document.querySelectorAll('form[ms-code-file-upload="form"]');
+
+forms.forEach((form) => {
+  form.setAttribute('enctype', 'multipart/form-data');
+  const uploadInputs = form.querySelectorAll('[ms-code-file-upload-input]');
+
+  uploadInputs.forEach((uploadInput) => {
+    const inputName = uploadInput.getAttribute('ms-code-file-upload-input');
+
+    const fileInput = document.createElement('input');
+    fileInput.setAttribute('type', 'file');
+    fileInput.setAttribute('name', inputName);
+    fileInput.setAttribute('id', inputName);
+    fileInput.setAttribute('required', '');
+
+    uploadInput.appendChild(fileInput);
+  });
+});
 
   // --- Main ---
   async function initialize() {
