@@ -1,6 +1,18 @@
-(function() {
+(function () {
   const API_BASE_URL = 'https://js-flame-sigma.vercel.app/api';
   const APPLY_URL_PATTERN = '/apply-job?id={{jobId}}';
+
+  const REQUIRED_ELEMENTS = [
+    'job-title',
+    'job-location',
+    'job-category',
+    'job-type',
+    'job-salary',
+    'job-description',
+    'apply-link',
+    'share-button',
+    'job-detail-container',
+  ];
 
   function getJobIdFromUrl() {
     const pathMatch = window.location.pathname.match(/\/jobs?\/([^\/]+)/i);
@@ -24,55 +36,47 @@
     }
   }
 
-  function waitForElement(selector, timeout = 3000) {
-    return new Promise((resolve, reject) => {
-      const start = Date.now();
-      (function check() {
-        const el = document.querySelector(`[data-element="${selector}"]`);
-        if (el) {
-          resolve(el);
-        } else if (Date.now() - start > timeout) {
-          console.warn(`[DEBUG] Timeout waiting for [data-element="${selector}"]`);
-          resolve(null);
-        } else {
-          requestAnimationFrame(check);
-        }
-      })();
+  function validateRequiredElements() {
+    REQUIRED_ELEMENTS.forEach(attr => {
+      const el = document.querySelector(`[data-element="${attr}"]`);
+      if (!el) {
+        console.warn(`[WARNING] Missing expected element: data-element="${attr}"`);
+      } else {
+        console.debug(`[DEBUG] Found element: data-element="${attr}"`);
+      }
     });
   }
 
-  async function setText(selector, value) {
-    const el = await waitForElement(selector);
-    if (el && value) {
+  function setText(selector, value) {
+    const el = document.querySelector(`[data-element="${selector}"]`);
+    if (el && value != null) {
       el.innerText = value;
       console.debug(`[DEBUG] Set text for [${selector}]: ${value}`);
     }
   }
 
-  async function setHTML(selector, value) {
-    const el = await waitForElement(selector);
-    if (el && value) {
+  function setHTML(selector, value) {
+    const el = document.querySelector(`[data-element="${selector}"]`);
+    if (el && value != null) {
       el.innerHTML = value;
       console.debug(`[DEBUG] Set HTML for [${selector}]`);
     }
   }
 
-  async function renderJobDetail(job) {
-    await Promise.all([
-      setText('job-title', job.title),
-      setText('job-location', job.city ? `${job.city}, ${job.state_code || ''}` : ''),
-      setText('job-category', job.category?.name),
-      setText('job-type', job.job_type?.name),
-      setText('job-salary', job.salary),
-      setHTML('job-description', job.description || 'No description available.')
-    ]);
+  function renderJobDetail(job) {
+    setText('job-title', job.title);
+    setText('job-location', job.city ? `${job.city}, ${job.state_code || ''}` : '');
+    setText('job-category', job.category?.name);
+    setText('job-type', job.job_type?.name);
+    setText('job-salary', job.salary);
+    setHTML('job-description', job.description || 'No description available.');
 
-    const applyLink = await waitForElement('apply-link');
+    const applyLink = document.querySelector('[data-element="apply-link"]');
     if (applyLink) {
       applyLink.setAttribute('href', APPLY_URL_PATTERN.replace('{{jobId}}', job.id));
     }
 
-    const shareBtn = await waitForElement('share-button');
+    const shareBtn = document.querySelector('[data-element="share-button"]');
     if (shareBtn) {
       if (navigator.share) {
         shareBtn.addEventListener('click', () => {
@@ -104,6 +108,8 @@
           <a href="/jobs" class="apply-button">View All Jobs</a>
         </div>
       `;
+    } else {
+      console.error('[ERROR] Missing container for job not found message (data-element="job-detail-container")');
     }
   }
 
@@ -111,10 +117,14 @@
     const el = document.querySelector('[data-element="job-detail-container"]');
     if (el) {
       el.innerHTML = `<div style="text-align:center; padding:40px;"><p>${msg}</p></div>`;
+    } else {
+      console.error('[ERROR] Missing container for error message (data-element="job-detail-container")');
     }
   }
 
   async function initialize() {
+    validateRequiredElements();
+
     const jobId = getJobIdFromUrl();
     console.debug('[DEBUG] Job ID from URL:', jobId);
     if (!jobId) {
@@ -124,7 +134,7 @@
 
     const job = await fetchJobDetail(jobId);
     if (job) {
-      await renderJobDetail(job);
+      renderJobDetail(job);
     } else {
       renderJobNotFound();
     }
