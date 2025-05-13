@@ -1,9 +1,41 @@
 (function () {
   console.log('[APPLY JOB] DOM ready, starting script');
 
-  // Global flags to check if everything is initialized
+  // Global flags
   let isJobDetailInitialized = false;
   let filePondInitialized = false;
+
+  // Function to initialize FilePond
+  function initializeFilePond() {
+    if (typeof FilePond === 'undefined') {
+      console.warn('[APPLY JOB] FilePond library is not loaded yet.');
+      setTimeout(initializeFilePond, 500);
+      return;
+    }
+
+    const fileInput = document.querySelector('input[type="file"][name="fileToUpload"]');
+    if (fileInput) {
+      const pond = FilePond.create(fileInput, {
+        credits: false,
+        storeAsFile: true
+      });
+
+      pond.on('ready', function() {
+        console.log('[APPLY JOB] FilePond is ready.');
+
+        const formElement = document.querySelector('#wf-form-Form-Apply-Job');
+        if (formElement) {
+          formElement.addEventListener('submit', handleFormSubmit);
+          console.log('[APPLY JOB] Form submit listener bound.');
+        }
+
+        filePondInitialized = true;
+        checkAllReady();
+      });
+    } else {
+      console.warn('[APPLY JOB] File input not found.');
+    }
+  }
 
   // Function to handle form submission
   async function handleFormSubmit(e) {
@@ -30,7 +62,6 @@
       return false;
     }
 
-    // Gather form field data
     const emailEl = document.getElementById('Email');
     const nameEl = document.getElementById('Name');
     const phoneEl = document.getElementById('Phone');
@@ -64,7 +95,6 @@
       body: form,
     };
 
-    // Disable submit button while waiting for the response
     const submitButton = document.querySelector('.submit-button-apply-job');
     submitButton.value = 'Please Wait...';
     submitButton.style.cursor = 'not-allowed';
@@ -100,62 +130,37 @@
     }
   }
 
-  // Function to initialize FilePond and bind submit event
-  function initializeFilePond() {
-    if (typeof FilePond === 'undefined') {
-      console.warn('[APPLY JOB] FilePond library is not loaded yet.');
-      setTimeout(initializeFilePond, 500); // Retry in 500ms
-      return;
-    }
-
-    const fileInput = document.querySelector('input[type="file"][name="fileToUpload"]');
-    if (fileInput) {
-      const pond = FilePond.create(fileInput, {
-        credits: false,
-        storeAsFile: true
-      });
-
-      pond.on('ready', function() {
-        console.log('[APPLY JOB] FilePond is ready.');
-
-        const formElement = document.querySelector('#wf-form-Form-Apply-Job');
-        if (formElement) {
-          formElement.addEventListener('submit', handleFormSubmit);
-          console.log('[APPLY JOB] Form submit listener bound.');
-        }
-
-        filePondInitialized = true;
-        checkAllReady();
-      });
-    } else {
-      console.warn('[APPLY JOB] File input not found.');
-    }
-  }
-
-  // Function to check if job-detail.js has initialized the job data
+  // Use MutationObserver to detect when job details are added to DOM
   function checkJobDetailInitialization() {
-    const jobDetailElement = document.querySelector('.job-detail-container');
-    if (jobDetailElement) {
-      console.log('[APPLY JOB] job-detail.js initialized.');
-      isJobDetailInitialized = true;
-      checkAllReady(); // Now check if all dependencies are ready
-    } else {
-      console.warn('[APPLY JOB] Job detail not initialized yet.');
-      setTimeout(checkJobDetailInitialization, 500); // Retry in 500ms
-    }
+    const observer = new MutationObserver((mutationsList) => {
+      for (const mutation of mutationsList) {
+        if (mutation.type === 'childList') {
+          const jobDetailElement = document.querySelector('.job-detail-container');
+          if (jobDetailElement) {
+            console.log('[APPLY JOB] job-detail.js initialized.');
+            isJobDetailInitialized = true;
+            observer.disconnect(); // Stop observing once it's initialized
+            checkAllReady(); // Check if all dependencies are ready
+          }
+        }
+      }
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
   }
 
-  // Function to check if all dependencies are ready
+  // Function to check if both job details and FilePond are ready
   function checkAllReady() {
     if (isJobDetailInitialized && filePondInitialized) {
       console.log('[APPLY JOB] All dependencies are ready. Running script.');
-      // Now it's safe to execute apply-job.js functionality
+      // Proceed with any other logic now that both are initialized
     }
   }
 
   // Wait for DOMContentLoaded to ensure the page is fully loaded
   document.addEventListener('DOMContentLoaded', function() {
     console.log('[APPLY JOB] DOM is fully loaded.');
-    checkJobDetailInitialization(); // Check job details and FilePond initialization
+    checkJobDetailInitialization(); // Set up MutationObserver
+    initializeFilePond(); // Initialize FilePond
   });
 })();
