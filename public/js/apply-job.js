@@ -6,20 +6,28 @@
     e.preventDefault();
     e.stopPropagation();
 
-    console.log('[APPLY JOB] Handling form submit');
+    // Wait until FilePond is fully initialized
+    let pond = FilePond.find(document.querySelector('input[type="file"][name="fileToUpload"]'));
 
-    // Wait for FilePond to initialize
-    const pond = await waitForFilePond();
-    console.log('[APPLY JOB] FilePond instance:', pond);
+    // Wait until FilePond is initialized, with a timeout retry mechanism
+    let retries = 0;
+    const maxRetries = 10; // max retry attempts
+    const retryDelay = 300; // milliseconds
+
+    while (!pond && retries < maxRetries) {
+      console.log('[APPLY JOB] Waiting for FilePond to initialize...');
+      await new Promise(resolve => setTimeout(resolve, retryDelay));
+      pond = FilePond.find(document.querySelector('input[type="file"][name="fileToUpload"]'));
+      retries++;
+    }
 
     if (!pond) {
-      console.warn('[APPLY JOB] FilePond instance not found.');
+      console.warn('[APPLY JOB] FilePond instance not found after retrying.');
       alert('Please upload a resume.');
       return false;
     }
 
     const file = pond.getFile(); // Get the uploaded file via FilePond
-    console.log('[APPLY JOB] File:', file);
     if (!file) {
       alert('Please upload a resume.');
       return false;
@@ -50,8 +58,6 @@
       return false;
     }
 
-    console.log('[APPLY JOB] Job ID:', jobId);
-
     // Prepare options for the API request
     const options = {
       method: 'POST',
@@ -64,19 +70,15 @@
 
     // Disable submit button while waiting for the response
     const submitButton = document.querySelector('.submit-button-apply-job');
-    if (submitButton) {
-      submitButton.value = 'Please Wait...';
-      submitButton.style.cursor = 'not-allowed';
-      submitButton.setAttribute('disabled', true);
-    }
+    submitButton.value = 'Please Wait...';
+    submitButton.style.cursor = 'not-allowed';
+    submitButton.setAttribute('disabled', true);
 
     try {
       // Send the application data to the server
-      console.log('[APPLY JOB] Sending application data...');
       const response = await fetch(`${API_BASE_URL}/apply-job`, options);
       const responseData = await response.json();
 
-      console.log('[APPLY JOB] Response:', responseData);
       if (responseData.success) {
         // Close the modal and show success message
         document.querySelector('.fs_modal-1_close-2').click();
@@ -100,41 +102,15 @@
       alert('An error occurred while submitting the form. Please try again.');
     } finally {
       // Re-enable the submit button after the request is complete
-      if (submitButton) {
-        submitButton.value = 'Submit';
-        submitButton.style.cursor = 'pointer';
-        submitButton.removeAttribute('disabled');
-      }
+      submitButton.value = 'Submit';
+      submitButton.style.cursor = 'pointer';
+      submitButton.removeAttribute('disabled');
     }
   }
 
-  // Function to wait for FilePond to be initialized with a timeout
-  async function waitForFilePond() {
-    console.log('[APPLY JOB] Waiting for FilePond to initialize...');
-    return new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        console.warn('[APPLY JOB] FilePond initialization timed out');
-        resolve(null);  // If timeout occurs, return null
-      }, 5000); // Timeout after 5 seconds
-
-      const interval = setInterval(() => {
-        const pond = FilePond.find(document.querySelector('input[type="file"][name="fileToUpload"]'));
-        if (pond) {
-          clearInterval(interval);
-          clearTimeout(timeout);  // Clear timeout once FilePond is initialized
-          console.log('[APPLY JOB] FilePond found');
-          resolve(pond);
-        }
-      }, 100); // Check every 100ms for FilePond
-    });
-  }
-
-  // Check if form exists and capture submit event
+  // Set up the form submission
   const formElement = document.querySelector('#wf-form-Form-Apply-Job');
   if (formElement) {
-    console.log('[APPLY JOB] Adding submit listener');
     formElement.addEventListener('submit', handleFormSubmit);
-  } else {
-    console.warn('[APPLY JOB] Form not found');
   }
 })();
