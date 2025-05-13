@@ -62,6 +62,85 @@
     if (metaDesc && job.description_text) {
       metaDesc.setAttribute('content', job.description_text.slice(0, 160));
     }
+
+    // ✅ File input creation
+    const fileInputSelector = 'input[type="file"][name="fileToUpload"]';
+    let fileInput = document.querySelector(fileInputSelector);
+    if (!fileInput) {
+      console.log('[WEBFLOW PAGE] Creating file input element');
+      const form = document.querySelector('#wf-form-Form-Apply-Job');
+      if (form) {
+        fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.name = 'fileToUpload';
+        fileInput.accept = '.pdf,.doc,.docx';
+        form.appendChild(fileInput);
+      }
+    }
+
+    // ✅ Initialize FilePond
+    if (fileInput && window.FilePond) {
+      console.log('[WEBFLOW PAGE] Initializing FilePond...');
+      FilePond.create(fileInput, {
+        labelIdle: 'Drag & Drop your resume or <span class="filepond--label-action">Browse</span>',
+        allowMultiple: false,
+        required: true,
+      });
+    } else {
+      console.warn('[WEBFLOW PAGE] FilePond not available or file input missing.');
+    }
+
+    // ✅ Hook up form submission
+    const form = document.querySelector('#wf-form-Form-Apply-Job');
+    if (form) {
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const successEl = document.querySelector('[data-element="apply-success"]');
+        const errorEl = document.querySelector('[data-element="apply-error"]');
+
+        if (submitBtn) submitBtn.disabled = true;
+        if (successEl) successEl.style.display = 'none';
+        if (errorEl) errorEl.style.display = 'none';
+
+        const formData = new FormData(form);
+        formData.append('jobId', job.id);
+
+        const fileInput = form.querySelector('input[type="file"][name="fileToUpload"]');
+        if (!fileInput || !fileInput.files.length) {
+          alert('Please upload a resume.');
+          if (submitBtn) submitBtn.disabled = false;
+          return;
+        }
+
+        try {
+          const res = await fetch(`${API_BASE_URL}/apply-job?id=${job.id}`, {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (!res.ok) throw new Error(`Status ${res.status}`);
+          const result = await res.json();
+
+          if (result.status === 'success') {
+            if (successEl) successEl.style.display = 'block';
+            form.reset();
+            FilePond.find(fileInput)?.removeFiles();
+          } else {
+            throw new Error(result.message || 'Unexpected error');
+          }
+        } catch (err) {
+          console.error('[APPLY JOB ERROR]', err);
+          if (errorEl) {
+            errorEl.textContent = 'Something went wrong. Please try again.';
+            errorEl.style.display = 'block';
+          }
+        } finally {
+          if (submitBtn) submitBtn.disabled = false;
+        }
+      });
+    }
   }
 
   function renderJobNotFound() {
