@@ -6,100 +6,107 @@
     e.preventDefault();
     e.stopPropagation();
 
-    // Check if FilePond is ready (using the data-filepond-ready attribute)
-    const formElement = document.querySelector('#wf-form-Form-Apply-Job');
-    if (!formElement || formElement.getAttribute('data-filepond-ready') !== 'true') {
-      console.warn('[APPLY JOB] FilePond not ready.');
-      alert('FilePond is not ready. Please wait and try again.');
-      return false;
-    }
-
-    // Initialize FilePond instance
+    // Check if FilePond is ready (waiting for initialization)
     const pond = FilePond.find(document.querySelector('input[type="file"][name="fileToUpload"]'));
     if (!pond) {
       console.warn('[APPLY JOB] FilePond instance not found.');
-      alert('Please upload a resume.');
+      alert('Please wait for FilePond to finish initializing.');
       return false;
     }
 
-    const file = pond.getFile(); // Get the uploaded file via FilePond
-    if (!file) {
-      alert('Please upload a resume.');
+    // Wait until FilePond is initialized before proceeding
+    if (!pond.isFilePondInitialized) {
+      console.log('[APPLY JOB] Waiting for FilePond to initialize...');
+      pond.on('init', () => {
+        console.log('[APPLY JOB] FilePond initialized');
+        submitForm();
+      });
       return false;
     }
 
-    // Gather form field data
-    const emailEl = document.getElementById('Email');
-    const nameEl = document.getElementById('Name');
-    const phoneEl = document.getElementById('Phone');
-    const linkedinEl = document.getElementById('LinkedIn');
+    // If FilePond is initialized, proceed with form submission
+    submitForm();
 
-    if (!emailEl || !nameEl || !phoneEl || !linkedinEl) {
-      alert('Form is misconfigured. Please contact the site administrator.');
-      return false;
-    }
-
-    const form = new FormData();
-    form.append('email', emailEl.value);
-    form.append('name', nameEl.value);
-    form.append('phone', phoneEl.value);
-    form.append('linkedin', linkedinEl.value);
-    form.append('resume', file.file, file.file.name);
-
-    const jobId = new URLSearchParams(window.location.search).get('id'); // Get job ID from URL
-    if (!jobId) {
-      console.error('[ERROR] No job ID found.');
-      alert('Error: Job ID not found.');
-      return false;
-    }
-
-    // Prepare options for the API request
-    const options = {
-      method: 'POST',
-      headers: {
-        accept: 'application/json',
-        JobId: jobId,
-      },
-      body: form,
-    };
-
-    // Disable submit button while waiting for the response
-    const submitButton = document.querySelector('.submit-button-apply-job');
-    submitButton.value = 'Please Wait...';
-    submitButton.style.cursor = 'not-allowed';
-    submitButton.setAttribute('disabled', true);
-
-    try {
-      // Send the application data to the server
-      const response = await fetch(`${API_BASE_URL}/apply-job`, options);
-      const responseData = await response.json();
-
-      if (responseData.success) {
-        // Close the modal and show success message
-        document.querySelector('.fs_modal-1_close-2').click();
-        Toastify({
-          text: 'Your application was successfully sent!',
-          duration: 2000,
-          gravity: 'top',
-          position: 'center',
-          style: { background: '#527853', color: '#FFFFFF' },
-        }).showToast();
-
-        // Reset the form and remove the file from FilePond
-        pond.removeFile();
-        document.querySelector('#wf-form-Form-Apply-Job').reset();
-      } else {
-        console.error('Failed to submit the form:', responseData);
-        alert('Failed to submit the form. Please try again.');
+    async function submitForm() {
+      const file = pond.getFile(); // Get the uploaded file via FilePond
+      if (!file) {
+        alert('Please upload a resume.');
+        return false;
       }
-    } catch (err) {
-      console.error('Error:', err);
-      alert('An error occurred while submitting the form. Please try again.');
-    } finally {
-      // Re-enable the submit button after the request is complete
-      submitButton.value = 'Submit';
-      submitButton.style.cursor = 'pointer';
-      submitButton.removeAttribute('disabled');
+
+      // Gather form field data
+      const emailEl = document.getElementById('Email');
+      const nameEl = document.getElementById('Name');
+      const phoneEl = document.getElementById('Phone');
+      const linkedinEl = document.getElementById('LinkedIn');
+
+      if (!emailEl || !nameEl || !phoneEl || !linkedinEl) {
+        alert('Form is misconfigured. Please contact the site administrator.');
+        return false;
+      }
+
+      const form = new FormData();
+      form.append('email', emailEl.value);
+      form.append('name', nameEl.value);
+      form.append('phone', phoneEl.value);
+      form.append('linkedin', linkedinEl.value);
+      form.append('resume', file.file, file.file.name);
+
+      const jobId = new URLSearchParams(window.location.search).get('id'); // Get job ID from URL
+      if (!jobId) {
+        console.error('[ERROR] No job ID found.');
+        alert('Error: Job ID not found.');
+        return false;
+      }
+
+      // Prepare options for the API request
+      const options = {
+        method: 'POST',
+        headers: {
+          accept: 'application/json',
+          JobId: jobId,
+        },
+        body: form,
+      };
+
+      // Disable submit button while waiting for the response
+      const submitButton = document.querySelector('.submit-button-apply-job');
+      submitButton.value = 'Please Wait...';
+      submitButton.style.cursor = 'not-allowed';
+      submitButton.setAttribute('disabled', true);
+
+      try {
+        // Send the application data to the server
+        const response = await fetch(`${API_BASE_URL}/apply-job`, options);
+        const responseData = await response.json();
+
+        if (responseData.success) {
+          // Close the modal and show success message
+          document.querySelector('.fs_modal-1_close-2').click();
+          Toastify({
+            text: 'Your application was successfully sent!',
+            duration: 2000,
+            gravity: 'top',
+            position: 'center',
+            style: { background: '#527853', color: '#FFFFFF' },
+          }).showToast();
+
+          // Reset the form and remove the file from FilePond
+          pond.removeFile();
+          document.querySelector('#wf-form-Form-Apply-Job').reset();
+        } else {
+          console.error('Failed to submit the form:', responseData);
+          alert('Failed to submit the form. Please try again.');
+        }
+      } catch (err) {
+        console.error('Error:', err);
+        alert('An error occurred while submitting the form. Please try again.');
+      } finally {
+        // Re-enable the submit button after the request is complete
+        submitButton.value = 'Submit';
+        submitButton.style.cursor = 'pointer';
+        submitButton.removeAttribute('disabled');
+      }
     }
   }
 
