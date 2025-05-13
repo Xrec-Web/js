@@ -6,8 +6,9 @@
     e.preventDefault();
     e.stopPropagation();
 
-    // Initialize FilePond instance
-    const pond = FilePond.find(document.querySelector('input[type="file"][name="fileToUpload"]'));
+    // Wait for FilePond to initialize
+    const pond = await waitForFilePond();
+
     if (!pond) {
       console.warn('[APPLY JOB] FilePond instance not found.');
       alert('Please upload a resume.');
@@ -93,6 +94,19 @@
       submitButton.style.cursor = 'pointer';
       submitButton.removeAttribute('disabled');
     }
+  }
+
+  // Function to wait for FilePond to be initialized
+  async function waitForFilePond() {
+    return new Promise((resolve, reject) => {
+      const interval = setInterval(() => {
+        const pond = FilePond.find(document.querySelector('input[type="file"][name="fileToUpload"]'));
+        if (pond) {
+          clearInterval(interval);
+          resolve(pond);
+        }
+      }, 100); // Check every 100ms for FilePond
+    });
   }
 
   // Set up the form submission
