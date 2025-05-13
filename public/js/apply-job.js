@@ -1,55 +1,88 @@
-document.addEventListener('DOMContentLoaded', () => {
-  console.log('[apply-job.js] DOM loaded');
+<!-- FilePond CSS + JS -->
+<link href="https://unpkg.com/filepond/dist/filepond.min.css" rel="stylesheet" />
+<script src="https://unpkg.com/filepond/dist/filepond.min.js"></script>
 
-  const jobId = new URLSearchParams(window.location.search).get('id');
-  if (!jobId) {
-    console.warn('[apply-job.js] No jobId found in URL.');
-    return;
-  }
+<script>
+  let jobId = '';
 
-  const form = document.getElementById('wf-form-Form-Apply-Job');
-  if (!form) {
-    console.error('[apply-job.js] Form with ID wf-form-Form-Apply-Job not found.');
-    return;
-  }
-
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    const formData = new FormData(form);
-
-    // Debug: Log all form fields
-    console.log('[apply-job.js] FormData entries:');
-    for (const [key, value] of formData.entries()) {
-      console.log(`  ${key}:`, value);
-    }
-
-    const file = formData.get('fileToUpload');
-    if (!file || !(file instanceof File) || file.size === 0) {
-      alert('Please upload a resume');
-      return;
-    }
-
-    try {
-      const response = await fetch(`https://loxo-buildout.vercel.app/api/apply-job?id=${jobId}`, {
-        method: 'POST',
-        body: formData,
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        console.error('[apply-job.js] Error submitting form to Loxo:', result);
-        alert('There was a problem submitting your application. Please try again.');
-        return;
-      }
-
-      console.log('[apply-job.js] Submission successful:', result);
-      alert('Application submitted successfully!');
-      form.reset();
-    } catch (error) {
-      console.error('[apply-job.js] Submission failed:', error);
-      alert('Something went wrong. Please try again later.');
-    }
+  // On job button click, open modal and set jobId
+  document.querySelectorAll('[apply-button]').forEach(button => {
+    button.addEventListener('click', () => {
+      jobId = button.getAttribute('apply-button');
+      document.querySelector('#fs-modal-1-popup').classList.add('active');
+    });
   });
-});
+
+  // Close modal
+  document.querySelector('.fs_modal-1_close-3').addEventListener('click', () => {
+    document.querySelector('#fs-modal-1-popup').classList.remove('active');
+  });
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const inputElement = document.querySelector('input[type="file"][name="fileToUpload"]');
+    const pond = FilePond.create(inputElement, {
+      name: 'resume',
+      storeAsFile: true,
+      credits: false,
+    });
+
+    Webflow.push(() => {
+      $('#wf-form-Apply-Job-Form').submit(async function (e) {
+        e.preventDefault();
+
+        const file = pond.getFile();
+        if (!file) {
+          alert('Please upload a resume.');
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append('name', $('#name-2').val());
+        formData.append('email', $('#email-2').val());
+        formData.append('phone', $('#phone-2').val());
+        formData.append('linkedin', $('#linkedin-2').val());
+        formData.append('resume', file.file, file.file.name);
+
+        $('.submit-button-apply-job')
+          .val('Submitting...')
+          .css('cursor', 'not-allowed')
+          .attr('disabled', true);
+
+        try {
+          const res = await fetch('/api/apply-job', {
+            method: 'POST',
+            headers: {
+              JobId: jobId,
+            },
+            body: formData,
+          });
+
+          if (res.ok) {
+            Toastify({
+              text: 'Application submitted successfully!',
+              duration: 3000,
+              gravity: 'top',
+              position: 'center',
+              style: { background: '#527853', color: '#ffffff' },
+            }).showToast();
+
+            pond.removeFile();
+            $('#wf-form-Apply-Job-Form').trigger('reset');
+            document.querySelector('.fs_modal-1_close-2')?.click();
+          } else {
+            const errorData = await res.json();
+            alert('Error: ' + (errorData?.error || 'Application failed.'));
+          }
+        } catch (err) {
+          console.error(err);
+          alert('Unexpected error submitting application.');
+        } finally {
+          $('.submit-button-apply-job')
+            .val('Submit')
+            .css('cursor', 'pointer')
+            .attr('disabled', false);
+        }
+      });
+    });
+  });
+</script>
