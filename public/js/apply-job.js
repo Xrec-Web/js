@@ -64,9 +64,11 @@
 
     // Disable submit button while waiting for the response
     const submitButton = document.querySelector('.submit-button-apply-job');
-    submitButton.value = 'Please Wait...';
-    submitButton.style.cursor = 'not-allowed';
-    submitButton.setAttribute('disabled', true);
+    if (submitButton) {
+      submitButton.value = 'Please Wait...';
+      submitButton.style.cursor = 'not-allowed';
+      submitButton.setAttribute('disabled', true);
+    }
 
     try {
       // Send the application data to the server
@@ -98,9 +100,11 @@
       alert('An error occurred while submitting the form. Please try again.');
     } finally {
       // Re-enable the submit button after the request is complete
-      submitButton.value = 'Submit';
-      submitButton.style.cursor = 'pointer';
-      submitButton.removeAttribute('disabled');
+      if (submitButton) {
+        submitButton.value = 'Submit';
+        submitButton.style.cursor = 'pointer';
+        submitButton.removeAttribute('disabled');
+      }
     }
   }
 
@@ -119,9 +123,12 @@
     });
   }
 
-  // Set up the form submission
+  // Check if form exists and capture submit event
   const formElement = document.querySelector('#wf-form-Form-Apply-Job');
   if (formElement) {
+    console.log('[APPLY JOB] Adding submit listener');
     formElement.addEventListener('submit', handleFormSubmit);
+  } else {
+    console.warn('[APPLY JOB] Form not found');
   }
 })();
