@@ -1,31 +1,20 @@
 (function () {
-  console.log('[APPLY JOB] DOM ready');
-
-  function initializeFilePond() {
-    const inputElement = document.querySelector('input[type="file"][name="fileToUpload"]');
-    if (!inputElement) {
-      console.warn('[APPLY JOB] No file input found.');
-      return null;
-    }
-
-    // Initialize FilePond
-    const pond = FilePond.create(inputElement, {
-      credits: false, // Disable FilePond credits
-      storeAsFile: true, // Store file as a file, not base64
-    });
-
-    return pond;
-  }
+  console.log('[APPLY JOB] DOM ready, starting script');
 
   // Function to handle form submission
   async function handleFormSubmit(e) {
     e.preventDefault();
     e.stopPropagation();
 
-    const pond = initializeFilePond();
-    if (!pond) return;
+    // Initialize FilePond instance
+    const pond = FilePond.find(document.querySelector('input[type="file"][name="fileToUpload"]'));
+    if (!pond) {
+      console.warn('[APPLY JOB] FilePond instance not found.');
+      alert('Please upload a resume.');
+      return false;
+    }
 
-    const file = pond.getFile(); // Get the file uploaded via FilePond
+    const file = pond.getFile(); // Get the uploaded file via FilePond
     if (!file) {
       alert('Please upload a resume.');
       return false;
@@ -49,12 +38,19 @@
     form.append('linkedin', linkedinEl.value);
     form.append('resume', file.file, file.file.name);
 
+    const jobId = new URLSearchParams(window.location.search).get('id'); // Get job ID from URL
+    if (!jobId) {
+      console.error('[ERROR] No job ID found.');
+      alert('Error: Job ID not found.');
+      return false;
+    }
+
     // Prepare options for the API request
     const options = {
       method: 'POST',
       headers: {
         accept: 'application/json',
-        JobId: new URLSearchParams(window.location.search).get('id'), // Get job ID from URL
+        JobId: jobId,
       },
       body: form,
     };
@@ -96,33 +92,3 @@
       submitButton.value = 'Submit';
       submitButton.style.cursor = 'pointer';
       submitButton.removeAttribute('disabled');
-    }
-  }
-
-  // Function to watch for the file input element's existence
-  function waitForFileInput() {
-    const formElement = document.querySelector('#wf-form-Form-Apply-Job');
-    if (!formElement) {
-      console.warn('[APPLY JOB] Form not found. Retrying...');
-      setTimeout(waitForFileInput, 500); // Retry after 500ms
-      return;
-    }
-
-    const observer = new MutationObserver(() => {
-      const inputElement = document.querySelector('input[type="file"][name="fileToUpload"]');
-      if (inputElement) {
-        observer.disconnect(); // Stop observing once the file input is found
-        const pond = initializeFilePond();
-        if (pond) {
-          formElement.addEventListener('submit', handleFormSubmit);
-        }
-      }
-    });
-
-    // Start observing for changes in the form
-    observer.observe(formElement, { childList: true, subtree: true });
-  }
-
-  // Start watching for the file input
-  waitForFileInput();
-})();
