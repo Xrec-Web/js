@@ -5,7 +5,7 @@
     const inputElement = document.querySelector('input[type="file"][name="fileToUpload"]');
     if (!inputElement) {
       console.warn('[APPLY JOB] No file input found.');
-      return;
+      return null;
     }
 
     // Initialize FilePond
@@ -99,23 +99,30 @@
     }
   }
 
-  // Wait until the form is available, then attach the submit handler
+  // Function to watch for the file input element's existence
   function waitForFileInput() {
-    const intervalId = setInterval(() => {
+    const formElement = document.querySelector('#wf-form-Form-Apply-Job');
+    if (!formElement) {
+      console.warn('[APPLY JOB] Form not found. Retrying...');
+      setTimeout(waitForFileInput, 500); // Retry after 500ms
+      return;
+    }
+
+    const observer = new MutationObserver(() => {
       const inputElement = document.querySelector('input[type="file"][name="fileToUpload"]');
       if (inputElement) {
-        clearInterval(intervalId); // Stop checking once the file input is found
+        observer.disconnect(); // Stop observing once the file input is found
         const pond = initializeFilePond();
-        const form = document.querySelector('#wf-form-Form-Apply-Job');
-        if (form) {
-          form.addEventListener('submit', handleFormSubmit);
-        } else {
-          console.error('[ERROR] Job application form not found.');
+        if (pond) {
+          formElement.addEventListener('submit', handleFormSubmit);
         }
       }
-    }, 100); // Check every 100ms
+    });
+
+    // Start observing for changes in the form
+    observer.observe(formElement, { childList: true, subtree: true });
   }
 
-  waitForFileInput(); // Start checking for the file input's existence
-
+  // Start watching for the file input
+  waitForFileInput();
 })();
