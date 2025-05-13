@@ -1,8 +1,8 @@
 (function () {
   console.log('[APPLY JOB] DOM ready, starting script');
 
-  // Global flag to check if everything is initialized
-  let isReady = false;
+  // Global flags to check if everything is initialized
+  let isJobDetailInitialized = false;
   let filePondInitialized = false;
 
   // Function to handle form submission
@@ -137,15 +137,17 @@
     const jobDetailElement = document.querySelector('.job-detail-container');
     if (jobDetailElement) {
       console.log('[APPLY JOB] job-detail.js initialized.');
-      initializeFilePond();
+      isJobDetailInitialized = true;
+      checkAllReady(); // Now check if all dependencies are ready
     } else {
       console.warn('[APPLY JOB] Job detail not initialized yet.');
+      setTimeout(checkJobDetailInitialization, 500); // Retry in 500ms
     }
   }
 
-  // Check if all dependencies are ready
+  // Function to check if all dependencies are ready
   function checkAllReady() {
-    if (filePondInitialized && isReady) {
+    if (isJobDetailInitialized && filePondInitialized) {
       console.log('[APPLY JOB] All dependencies are ready. Running script.');
       // Now it's safe to execute apply-job.js functionality
     }
