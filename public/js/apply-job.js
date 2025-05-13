@@ -14,31 +14,38 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   Webflow.push(function () {
+    // Extract job ID from URL first
+    const urlParams = new URLSearchParams(window.location.search);
+    const jobId = urlParams.get('id');
+    if (!jobId) {
+      console.error('[APPLY JOB] No job ID found in URL');
+      return;
+    }
+    console.log(`[APPLY JOB] Job ID from URL: ${jobId}`);
+
+    // Wait for DOM elements to be fully present
     const form = document.querySelector('#wf-form-Apply-Job-Form');
     const applyButton = document.querySelector('.apply-button');
 
-    // Check for form and button
     if (!form) {
-      console.error('[APPLY JOB] Job application form not found. Ensure the form has the correct ID.');
+      console.error('[APPLY JOB] Job application form not found');
       return;
     }
 
     if (!applyButton) {
-      console.error('[APPLY JOB] Apply button not found. Ensure it has class "apply-button".');
+      console.error('[APPLY JOB] Apply button not found');
       return;
     }
 
-    // Extract job ID from URL (same method as job-detail.js)
-    const urlParams = new URLSearchParams(window.location.search);
-    const jobId = urlParams.get('id');
-    if (!jobId) {
-      console.error('[APPLY JOB] No job ID found in URL query string (e.g., ?id=123456).');
-      return;
-    }
-
-    // Apply the job ID to the button's dataset
+    // ✅ Set job ID to button *before* using it
     applyButton.setAttribute('data-job-id', jobId);
-    console.log(`[APPLY JOB] Job ID set on button: ${jobId}`);
+
+    // ✅ Confirm it's applied
+    const buttonJobId = applyButton.getAttribute('data-job-id');
+    if (!buttonJobId) {
+      console.error('[APPLY JOB] Failed to assign job ID to button');
+      return;
+    }
 
     form.addEventListener('submit', async function (e) {
       e.preventDefault();
@@ -60,12 +67,11 @@ document.addEventListener('DOMContentLoaded', function () {
         method: 'POST',
         headers: {
           accept: 'application/json',
-          'JobId': jobId,
+          JobId: jobId,
         },
         body: formData,
       };
 
-      // Disable button and show loading state
       applyButton.innerHTML = 'Please Wait...';
       applyButton.disabled = true;
 
@@ -74,12 +80,11 @@ document.addEventListener('DOMContentLoaded', function () {
         const data = await response.json();
 
         if (!response.ok) {
-          console.error('[APPLY JOB] API responded with error:', data);
+          console.error('[APPLY JOB] API error:', data);
           throw new Error(data?.error || 'Application failed');
         }
 
         console.log('[APPLY JOB] Application successful:', data);
-
         Toastify({
           text: 'Your application was successfully sent!',
           duration: 2000,
@@ -90,11 +95,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
         form.reset();
         pond.removeFile();
-        applyButton.innerHTML = 'Submit';
-        applyButton.disabled = false;
       } catch (err) {
-        console.error('[APPLY JOB] Submission failed:', err);
-
+        console.error('[APPLY JOB] Submission error:', err);
         Toastify({
           text: 'There was an error submitting your application.',
           duration: 3000,
@@ -102,7 +104,7 @@ document.addEventListener('DOMContentLoaded', function () {
           position: 'center',
           style: { background: '#d9534f', color: '#FFFFFF' },
         }).showToast();
-
+      } finally {
         applyButton.innerHTML = 'Submit';
         applyButton.disabled = false;
       }
