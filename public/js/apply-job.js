@@ -3,13 +3,13 @@
 
   // Global flag to check if everything is initialized
   let isReady = false;
+  let filePondInitialized = false;
 
   // Function to handle form submission
   async function handleFormSubmit(e) {
     e.preventDefault();
     e.stopPropagation();
 
-    // Ensure that the file input exists
     const fileInput = document.querySelector('input[type="file"][name="fileToUpload"]');
     if (!fileInput) {
       console.warn('[APPLY JOB] File input element not found.');
@@ -17,7 +17,6 @@
       return false;
     }
 
-    // Initialize FilePond instance
     const pond = FilePond.find(fileInput);
     if (!pond) {
       console.warn('[APPLY JOB] FilePond instance not found.');
@@ -25,7 +24,7 @@
       return false;
     }
 
-    const file = pond.getFile(); // Get the uploaded file via FilePond
+    const file = pond.getFile();
     if (!file) {
       alert('Please upload a resume.');
       return false;
@@ -49,14 +48,13 @@
     form.append('linkedin', linkedinEl.value);
     form.append('resume', file.file, file.file.name);
 
-    const jobId = new URLSearchParams(window.location.search).get('id'); // Get job ID from URL
+    const jobId = new URLSearchParams(window.location.search).get('id');
     if (!jobId) {
       console.error('[ERROR] No job ID found.');
       alert('Error: Job ID not found.');
       return false;
     }
 
-    // Prepare options for the API request
     const options = {
       method: 'POST',
       headers: {
@@ -73,12 +71,10 @@
     submitButton.setAttribute('disabled', true);
 
     try {
-      // Send the application data to the server
       const response = await fetch(`${API_BASE_URL}/apply-job`, options);
       const responseData = await response.json();
 
       if (responseData.success) {
-        // Close the modal and show success message
         document.querySelector('.fs_modal-1_close-2').click();
         Toastify({
           text: 'Your application was successfully sent!',
@@ -88,7 +84,6 @@
           style: { background: '#527853', color: '#FFFFFF' },
         }).showToast();
 
-        // Reset the form and remove the file from FilePond
         pond.removeFile();
         document.querySelector('#wf-form-Form-Apply-Job').reset();
       } else {
@@ -99,7 +94,6 @@
       console.error('Error:', err);
       alert('An error occurred while submitting the form. Please try again.');
     } finally {
-      // Re-enable the submit button after the request is complete
       submitButton.value = 'Submit';
       submitButton.style.cursor = 'pointer';
       submitButton.removeAttribute('disabled');
@@ -108,6 +102,12 @@
 
   // Function to initialize FilePond and bind submit event
   function initializeFilePond() {
+    if (typeof FilePond === 'undefined') {
+      console.warn('[APPLY JOB] FilePond library is not loaded yet.');
+      setTimeout(initializeFilePond, 500); // Retry in 500ms
+      return;
+    }
+
     const fileInput = document.querySelector('input[type="file"][name="fileToUpload"]');
     if (fileInput) {
       const pond = FilePond.create(fileInput, {
@@ -124,9 +124,8 @@
           console.log('[APPLY JOB] Form submit listener bound.');
         }
 
-        // Now that everything is ready, set the isReady flag
-        isReady = true;
-        console.log('[APPLY JOB] All dependencies are ready.');
+        filePondInitialized = true;
+        checkAllReady();
       });
     } else {
       console.warn('[APPLY JOB] File input not found.');
@@ -135,28 +134,26 @@
 
   // Function to check if job-detail.js has initialized the job data
   function checkJobDetailInitialization() {
-    const jobDetailElement = document.querySelector('.job-detail-container'); // Or a more specific selector
+    const jobDetailElement = document.querySelector('.job-detail-container');
     if (jobDetailElement) {
       console.log('[APPLY JOB] job-detail.js initialized.');
-      initializeFilePond(); // Initialize FilePond once job details are ready
+      initializeFilePond();
     } else {
       console.warn('[APPLY JOB] Job detail not initialized yet.');
+    }
+  }
+
+  // Check if all dependencies are ready
+  function checkAllReady() {
+    if (filePondInitialized && isReady) {
+      console.log('[APPLY JOB] All dependencies are ready. Running script.');
+      // Now it's safe to execute apply-job.js functionality
     }
   }
 
   // Wait for DOMContentLoaded to ensure the page is fully loaded
   document.addEventListener('DOMContentLoaded', function() {
     console.log('[APPLY JOB] DOM is fully loaded.');
-
-    // Check if job-detail.js has initialized
-    const interval = setInterval(() => {
-      if (isReady) {
-        clearInterval(interval);  // Stop checking once everything is ready
-        console.log('[APPLY JOB] All dependencies are ready to go.');
-      }
-    }, 200);  // Check every 200ms until everything is ready
-
-    // Call the function to check job-detail.js initialization
-    checkJobDetailInitialization();
+    checkJobDetailInitialization(); // Check job details and FilePond initialization
   });
 })();
