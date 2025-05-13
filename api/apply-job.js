@@ -3,7 +3,7 @@
 import formidable from 'formidable';
 import fs from 'fs';
 import fetch from 'node-fetch';
-import FormData from 'form-data'; // ← IMPORTANT for Node.js
+import FormData from 'form-data';
 
 export const config = {
   api: {
@@ -12,6 +12,17 @@ export const config = {
 };
 
 export default async function handler(req, res) {
+  // ✅ CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, jobid');
+
+  // ✅ Handle preflight
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
+  // ✅ Only accept POST
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -24,7 +35,10 @@ export default async function handler(req, res) {
   const form = formidable({ keepExtensions: true });
 
   form.parse(req, async (err, fields, files) => {
-    if (err) return res.status(500).json({ error: 'Form parsing error' });
+    if (err) {
+      console.error('Form parsing error:', err);
+      return res.status(500).json({ error: 'Form parsing error' });
+    }
 
     const { name, email, phone, linkedin } = fields;
     const resumeFile = files.resume;
@@ -38,7 +52,7 @@ export default async function handler(req, res) {
       const formData = new FormData();
       formData.append('file', resumeStream, resumeFile.originalFilename);
 
-      // Upload resume
+      // ✅ Upload resume to Loxo
       const uploadRes = await fetch('https://api.loxo.co/resume/upload', {
         method: 'POST',
         headers: {
@@ -50,18 +64,19 @@ export default async function handler(req, res) {
       const uploadData = await uploadRes.json();
 
       if (!uploadRes.ok || !uploadData.resume_id) {
-        return res
-          .status(500)
-          .json({ error: 'Resume upload failed', details: uploadData });
+        return res.status(500).json({
+          error: 'Resume upload failed',
+          details: uploadData,
+        });
       }
 
       const resumeId = uploadData.resume_id;
 
-      // Apply to job
+      // ✅ Submit application to Loxo
       const applyRes = await fetch(`https://api.loxo.co/job/apply/${jobId}`, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${process.env.LOXO_BEARER_TOKEN}`, // or LOXO_API_KEY, just stay consistent
+          Authorization: `Bearer ${process.env.LOXO_BEARER_TOKEN}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -77,16 +92,19 @@ export default async function handler(req, res) {
       const applyData = await applyRes.json();
 
       if (!applyRes.ok) {
-        return res
-          .status(applyRes.status)
-          .json({ error: 'Application failed', details: applyData });
+        return res.status(applyRes.status).json({
+          error: 'Application failed',
+          details: applyData,
+        });
       }
 
       return res.status(200).json({ success: true });
     } catch (error) {
-      return res
-        .status(500)
-        .json({ error: 'Server error', details: error.message });
+      console.error('Server error:', error);
+      return res.status(500).json({
+        error: 'Server error',
+        details: error.message,
+      });
     }
   });
 }
