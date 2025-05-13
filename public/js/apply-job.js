@@ -92,3 +92,12 @@
       submitButton.value = 'Submit';
       submitButton.style.cursor = 'pointer';
       submitButton.removeAttribute('disabled');
+    }
+  }
+
+  // Set up the form submission
+  const formElement = document.querySelector('#wf-form-Form-Apply-Job');
+  if (formElement) {
+    formElement.addEventListener('submit', handleFormSubmit);
+  }
+})();
