@@ -9,7 +9,7 @@
     // Wait until FilePond is fully initialized
     let pond = FilePond.find(document.querySelector('input[type="file"][name="fileToUpload"]'));
 
-    // Wait until FilePond is initialized, with a timeout retry mechanism
+    // Add an interval check if FilePond is still initializing
     let retries = 0;
     const maxRetries = 10; // max retry attempts
     const retryDelay = 300; // milliseconds
