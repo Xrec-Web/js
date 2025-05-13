@@ -1,65 +1,112 @@
 (function () {
   console.log('[APPLY JOB] DOM ready, starting script');
 
-  const API_BASE_URL = 'https://sky-api.vercel.app/api';
+  const API_URL = 'https://js-flame-sigma.vercel.app/api/apply-job';
+  let jobId = null;
 
-  let filePondInitialized = false;
+  // 🔍 Get job ID from URL query string
+  function getJobIdFromUrl() {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('id') || urlParams.get('jobId') || null;
+  }
 
+  // 🧪 Utility: inject file input if not already present
+  function ensureFileInputExists() {
+    if (!document.querySelector('input[name="resume"]')) {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.name = 'resume';
+      input.accept = '.pdf,.doc,.docx';
+      input.required = true;
+      input.classList.add('hidden');
+      document.body.appendChild(input);
+      console.log('[APPLY JOB] File input created');
+    }
+  }
+
+  // 📤 Init FilePond
   function initializeFilePond() {
-    if (typeof FilePond === 'undefined') {
-      console.warn('[APPLY JOB] FilePond not yet loaded. Retrying...');
-      setTimeout(initializeFilePond, 500);
-      return;
-    }
+    const input = document.querySelector('input[name="resume"]');
+    if (!input) return console.error('[APPLY JOB] No resume input found for FilePond');
 
-    const fileInput = document.querySelector('input[type="file"][name="fileToUpload"]');
-    if (!fileInput) {
-      console.warn('[APPLY JOB] File input not found. Waiting for it...');
-      return;
-    }
-
-    const pond = FilePond.create(fileInput, {
-      credits: false,
-      storeAsFile: true
+    FilePond.registerPlugin(FilePondPluginFileValidateType);
+    FilePond.create(input, {
+      acceptedFileTypes: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+      labelIdle: 'Drag & drop your resume or <span class="filepond--label-action">browse</span>',
     });
 
-    pond.on('ready', function () {
-      console.log('[APPLY JOB] FilePond is ready.');
+    console.log('[APPLY JOB] FilePond initialized');
+  }
 
-      const formElement = document.querySelector('#wf-form-Form-Apply-Job');
-      if (formElement) {
-        formElement.addEventListener('submit', handleFormSubmit);
-        console.log('[APPLY JOB] Form submit listener bound.');
+  // 🚀 Form submission handler
+  function setupFormHandler() {
+    const form = document.querySelector('[data-element="job-apply-form"]');
+    if (!form) return console.warn('[APPLY JOB] No form found to initialize');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const submitBtn = form.querySelector('button[type="submit"]');
+      submitBtn.disabled = true;
+      submitBtn.innerText = 'Submitting...';
+
+      const formData = new FormData(form);
+      const file = formData.get('resume');
+
+      if (!file || !(file instanceof File)) {
+        alert('Please upload a valid resume file.');
+        submitBtn.disabled = false;
+        submitBtn.innerText = 'Apply Now';
+        return;
       }
 
-      filePondInitialized = true;
-    });
-  }
+      try {
+        const response = await fetch(`${API_URL}?id=${jobId}`, {
+          method: 'POST',
+          headers: {
+            'jobid': jobId,
+          },
+          body: formData,
+        });
 
-  function handleFormSubmit(e) {
-    // your existing handleFormSubmit code...
-  }
+        const data = await response.json();
 
-  function observeFileInput() {
-    const observer = new MutationObserver((mutationsList, observerInstance) => {
-      for (const mutation of mutationsList) {
-        if (mutation.type === 'childList') {
-          const fileInput = document.querySelector('input[type="file"][name="fileToUpload"]');
-          if (fileInput) {
-            console.log('[APPLY JOB] File input found via MutationObserver');
-            observerInstance.disconnect();
-            initializeFilePond();
-            break;
-          }
+        if (!response.ok) {
+          console.error('[APPLY JOB ERROR]', data);
+          alert(data.error || 'Application failed. Please try again.');
+        } else {
+          alert('Application submitted successfully!');
+          form.reset();
+          FilePond.find(document.querySelector('input[name="resume"]'))?.removeFiles();
         }
+      } catch (err) {
+        console.error('[APPLY JOB ERROR]', err);
+        alert('Something went wrong while submitting your application.');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerText = 'Apply Now';
       }
     });
-
-    observer.observe(document.body, { childList: true, subtree: true });
   }
 
-  document.addEventListener('DOMContentLoaded', function () {
+  // 🎬 Entry point
+  function init() {
+    jobId = getJobIdFromUrl();
+    if (!jobId) {
+      console.warn('[APPLY JOB] No job ID found in URL');
+      return;
+    }
+
     console.log('[APPLY JOB] DOM is fully loaded.');
-    observeFileInput(); // Start observing for file input
-  });
+    ensureFileInputExists();
+    initializeFilePond();
+    setupFormHandler();
+  }
+
+  // Wait for DOM ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 })();
