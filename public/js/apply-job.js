@@ -103,9 +103,21 @@
     }
   }
 
-  // Set up the form submission
-  const formElement = document.querySelector('#wf-form-Form-Apply-Job');
-  if (formElement) {
-    formElement.addEventListener('submit', handleFormSubmit);
+  // Ensure FilePond is initialized before adding form submit listener
+  function checkFilePondAndBindSubmit() {
+    const fileInput = document.querySelector('input[type="file"][name="fileToUpload"]');
+    if (fileInput && FilePond.find(fileInput)) {
+      const formElement = document.querySelector('#wf-form-Form-Apply-Job');
+      if (formElement) {
+        formElement.addEventListener('submit', handleFormSubmit);
+        console.log('[APPLY JOB] Form submit listener bound.');
+      }
+    } else {
+      console.warn('[APPLY JOB] FilePond not yet initialized, retrying...');
+      setTimeout(checkFilePondAndBindSubmit, 500); // Retry after delay
+    }
   }
+
+  // Call the function to check FilePond and bind submit
+  checkFilePondAndBindSubmit();
 })();
