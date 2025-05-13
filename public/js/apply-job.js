@@ -108,14 +108,20 @@
     }
   }
 
-  // Function to wait for FilePond to be initialized
+  // Function to wait for FilePond to be initialized with a timeout
   async function waitForFilePond() {
     console.log('[APPLY JOB] Waiting for FilePond to initialize...');
     return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        console.warn('[APPLY JOB] FilePond initialization timed out');
+        resolve(null);  // If timeout occurs, return null
+      }, 5000); // Timeout after 5 seconds
+
       const interval = setInterval(() => {
         const pond = FilePond.find(document.querySelector('input[type="file"][name="fileToUpload"]'));
         if (pond) {
           clearInterval(interval);
+          clearTimeout(timeout);  // Clear timeout once FilePond is initialized
           console.log('[APPLY JOB] FilePond found');
           resolve(pond);
         }
