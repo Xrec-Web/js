@@ -103,21 +103,41 @@
     }
   }
 
-  // Ensure FilePond is initialized before adding form submit listener
-  function checkFilePondAndBindSubmit() {
+  // Wait for FilePond to initialize using its event system
+  function initializeFilePond() {
     const fileInput = document.querySelector('input[type="file"][name="fileToUpload"]');
-    if (fileInput && FilePond.find(fileInput)) {
-      const formElement = document.querySelector('#wf-form-Form-Apply-Job');
-      if (formElement) {
-        formElement.addEventListener('submit', handleFormSubmit);
-        console.log('[APPLY JOB] Form submit listener bound.');
-      }
-    } else {
-      console.warn('[APPLY JOB] FilePond not yet initialized, retrying...');
-      setTimeout(checkFilePondAndBindSubmit, 500); // Retry after delay
+    if (fileInput) {
+      const pond = FilePond.create(fileInput, {
+        credits: false,
+        storeAsFile: true
+      });
+
+      pond.on('ready', function() {
+        console.log('[APPLY JOB] FilePond is ready.');
+        const formElement = document.querySelector('#wf-form-Form-Apply-Job');
+        if (formElement) {
+          formElement.addEventListener('submit', handleFormSubmit);
+          console.log('[APPLY JOB] Form submit listener bound.');
+        }
+      });
     }
   }
 
-  // Call the function to check FilePond and bind submit
-  checkFilePondAndBindSubmit();
+  // Check if FilePond is initialized, if not, initialize it
+  if (!document.querySelector('input[type="file"][name="fileToUpload"]')) {
+    // If the file input is not yet created, initialize it
+    const formElement = document.querySelector('#wf-form-Form-Apply-Job');
+    if (formElement) {
+      const newFileInput = document.createElement('input');
+      newFileInput.setAttribute('type', 'file');
+      newFileInput.setAttribute('name', 'fileToUpload');
+      newFileInput.setAttribute('id', 'fileToUpload');
+      newFileInput.required = true;
+
+      formElement.appendChild(newFileInput);
+    }
+  }
+
+  // Now initialize FilePond
+  initializeFilePond();
 })();
