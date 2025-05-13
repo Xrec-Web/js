@@ -42,7 +42,7 @@ export default async function handler(req, res) {
       const uploadRes = await fetch('https://api.loxo.co/resume/upload', {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${process.env.LOXO_API_KEY}`,
+          Authorization: `Bearer ${process.env.LOXO_BEARER_TOKEN}`,
         },
         body: formData,
       });
