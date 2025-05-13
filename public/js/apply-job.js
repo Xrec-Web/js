@@ -6,23 +6,18 @@
     e.preventDefault();
     e.stopPropagation();
 
-    // Wait until FilePond is fully initialized
-    let pond = FilePond.find(document.querySelector('input[type="file"][name="fileToUpload"]'));
-
-    // Add an interval check if FilePond is still initializing
-    let retries = 0;
-    const maxRetries = 10; // max retry attempts
-    const retryDelay = 300; // milliseconds
-
-    while (!pond && retries < maxRetries) {
-      console.log('[APPLY JOB] Waiting for FilePond to initialize...');
-      await new Promise(resolve => setTimeout(resolve, retryDelay));
-      pond = FilePond.find(document.querySelector('input[type="file"][name="fileToUpload"]'));
-      retries++;
+    // Check if FilePond is ready (using the data-filepond-ready attribute)
+    const formElement = document.querySelector('#wf-form-Form-Apply-Job');
+    if (!formElement || formElement.getAttribute('data-filepond-ready') !== 'true') {
+      console.warn('[APPLY JOB] FilePond not ready.');
+      alert('FilePond is not ready. Please wait and try again.');
+      return false;
     }
 
+    // Initialize FilePond instance
+    const pond = FilePond.find(document.querySelector('input[type="file"][name="fileToUpload"]'));
     if (!pond) {
-      console.warn('[APPLY JOB] FilePond instance not found after retrying.');
+      console.warn('[APPLY JOB] FilePond instance not found.');
       alert('Please upload a resume.');
       return false;
     }
