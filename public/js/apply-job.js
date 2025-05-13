@@ -1,23 +1,29 @@
 (function () {
   console.log('[APPLY JOB] DOM ready');
 
-  // Ensure the form and file input are present before proceeding
-  const inputElement = document.querySelector('input[type="file"][name="fileToUpload"]');
-  if (!inputElement) {
-    alert('File input not found. Ensure the file input is present in the form.');
-    return;
-  }
+  function initializeFilePond() {
+    const inputElement = document.querySelector('input[type="file"][name="fileToUpload"]');
+    if (!inputElement) {
+      console.warn('[APPLY JOB] No file input found.');
+      return;
+    }
 
-  // Initialize FilePond
-  const pond = FilePond.create(inputElement, {
-    credits: false, // Disable FilePond credits
-    storeAsFile: true, // Store file as a file, not base64
-  });
+    // Initialize FilePond
+    const pond = FilePond.create(inputElement, {
+      credits: false, // Disable FilePond credits
+      storeAsFile: true, // Store file as a file, not base64
+    });
+
+    return pond;
+  }
 
   // Function to handle form submission
   async function handleFormSubmit(e) {
     e.preventDefault();
     e.stopPropagation();
+
+    const pond = initializeFilePond();
+    if (!pond) return;
 
     const file = pond.getFile(); // Get the file uploaded via FilePond
     if (!file) {
@@ -93,11 +99,23 @@
     }
   }
 
-  // Attach the submit handler to the form
-  const form = document.querySelector('#wf-form-Form-Apply-Job');
-  if (form) {
-    form.addEventListener('submit', handleFormSubmit);
-  } else {
-    console.error('[ERROR] Job application form not found.');
+  // Wait until the form is available, then attach the submit handler
+  function waitForFileInput() {
+    const intervalId = setInterval(() => {
+      const inputElement = document.querySelector('input[type="file"][name="fileToUpload"]');
+      if (inputElement) {
+        clearInterval(intervalId); // Stop checking once the file input is found
+        const pond = initializeFilePond();
+        const form = document.querySelector('#wf-form-Form-Apply-Job');
+        if (form) {
+          form.addEventListener('submit', handleFormSubmit);
+        } else {
+          console.error('[ERROR] Job application form not found.');
+        }
+      }
+    }, 100); // Check every 100ms
   }
+
+  waitForFileInput(); // Start checking for the file input's existence
+
 })();
