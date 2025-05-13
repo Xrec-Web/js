@@ -6,8 +6,11 @@
     e.preventDefault();
     e.stopPropagation();
 
+    console.log('[APPLY JOB] Handling form submit');
+
     // Wait for FilePond to initialize
     const pond = await waitForFilePond();
+    console.log('[APPLY JOB] FilePond instance:', pond);
 
     if (!pond) {
       console.warn('[APPLY JOB] FilePond instance not found.');
@@ -16,6 +19,7 @@
     }
 
     const file = pond.getFile(); // Get the uploaded file via FilePond
+    console.log('[APPLY JOB] File:', file);
     if (!file) {
       alert('Please upload a resume.');
       return false;
@@ -46,6 +50,8 @@
       return false;
     }
 
+    console.log('[APPLY JOB] Job ID:', jobId);
+
     // Prepare options for the API request
     const options = {
       method: 'POST',
@@ -64,9 +70,11 @@
 
     try {
       // Send the application data to the server
+      console.log('[APPLY JOB] Sending application data...');
       const response = await fetch(`${API_BASE_URL}/apply-job`, options);
       const responseData = await response.json();
 
+      console.log('[APPLY JOB] Response:', responseData);
       if (responseData.success) {
         // Close the modal and show success message
         document.querySelector('.fs_modal-1_close-2').click();
@@ -98,11 +106,13 @@
 
   // Function to wait for FilePond to be initialized
   async function waitForFilePond() {
+    console.log('[APPLY JOB] Waiting for FilePond to initialize...');
     return new Promise((resolve, reject) => {
       const interval = setInterval(() => {
         const pond = FilePond.find(document.querySelector('input[type="file"][name="fileToUpload"]'));
         if (pond) {
           clearInterval(interval);
+          console.log('[APPLY JOB] FilePond found');
           resolve(pond);
         }
       }, 100); // Check every 100ms for FilePond
