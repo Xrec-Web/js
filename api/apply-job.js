@@ -1,94 +1,115 @@
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
+(function () {
+  const API_BASE_URL = 'https://js-flame-sigma.vercel.app/api';
+  const FORM_SELECTOR = '[data-element="apply-job-form"]';
+  const FILE_INPUT_SELECTOR = 'input[name="resume"]';
+  const FILEPOND_SELECTOR = '[data-element="filepond"]';
 
-export default async function handler(req, res) {
-  // Allow cross-origin requests
-  res.setHeader('Access-Control-Allow-Origin', '*'); // or specify your Webflow domain here
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, jobid');
+  console.log('[APPLY JOB] DOM ready, starting script');
 
-  // If it's a preflight request, just respond
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
+  function getJobIdFromUrl() {
+    const pathMatch = window.location.pathname.match(/\/jobs?\/([^\/]+)/i);
+    if (pathMatch && pathMatch[1]) return pathMatch[1];
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('id') || urlParams.get('jobId') || null;
   }
 
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+  function ensureFileInputExists() {
+    const existingInput = document.querySelector(FILE_INPUT_SELECTOR);
+    if (existingInput) return; // File input already exists, no need to create it again
+
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.name = 'resume';
+    input.accept = '.pdf,.doc,.docx';
+    input.required = true;
+    document.querySelector(FILEPOND_SELECTOR).appendChild(input);
+    console.log('[APPLY JOB] File input created');
   }
 
-  const jobId = req.headers['jobid'];
-  if (!jobId) {
-    return res.status(400).json({ error: 'Missing Job ID' });
-  }
+  async function handleFormSubmission(event) {
+    event.preventDefault();
+    const formData = new FormData(event.target);
+    const jobId = getJobIdFromUrl();
 
-  const form = formidable({ keepExtensions: true });
-  form.parse(req, async (err, fields, files) => {
-    if (err) return res.status(500).json({ error: 'Form parsing error' });
-
-    const { name, email, phone, linkedin } = fields;
-    const resumeFile = files.resume;
-
-    if (!resumeFile) {
-      return res.status(400).json({ error: 'Missing resume file' });
+    if (!jobId) {
+      console.error('[ERROR] No job ID found');
+      return;
     }
 
-    try {
-      const resumeStream = fs.createReadStream(resumeFile.filepath);
-      const formData = new FormData();
-      formData.append('file', resumeStream, resumeFile.originalFilename);
+    // Add jobId to the form data before sending
+    formData.append('jobid', jobId);
 
-      // Upload resume
-      const uploadRes = await fetch('https://api.loxo.co/resume/upload', {
+    try {
+      const response = await fetch(`${API_BASE_URL}/apply-job`, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${process.env.LOXO_BEARER_TOKEN}`,
+          'Accept': 'application/json',
         },
         body: formData,
       });
 
-      const uploadData = await uploadRes.json();
-
-      if (!uploadRes.ok || !uploadData.resume_id) {
-        return res
-          .status(500)
-          .json({ error: 'Resume upload failed', details: uploadData });
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('[APPLY JOB ERROR]', errorData);
+        alert('There was an issue with your application. Please try again.');
+        return;
       }
 
-      const resumeId = uploadData.resume_id;
-
-      // Apply to job
-      const applyRes = await fetch(`https://api.loxo.co/job/apply/${jobId}`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${process.env.LOXO_BEARER_TOKEN}`, // or LOXO_API_KEY, just stay consistent
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          first_name: name,
-          last_name: '',
-          email,
-          phone,
-          resume_id: resumeId,
-          linkedin_url: linkedin,
-        }),
-      });
-
-      const applyData = await applyRes.json();
-
-      if (!applyRes.ok) {
-        return res
-          .status(applyRes.status)
-          .json({ error: 'Application failed', details: applyData });
-      }
-
-      return res.status(200).json({ success: true });
+      const result = await response.json();
+      console.log('[APPLY JOB SUCCESS]', result);
+      alert('Your application has been submitted successfully!');
     } catch (error) {
-      return res
-        .status(500)
-        .json({ error: 'Server error', details: error.message });
+      console.error('[APPLY JOB ERROR]', error);
+      alert('There was an issue with your application. Please try again later.');
     }
-  });
-}
+  }
+
+  function initializeFilePond() {
+    // Initialize FilePond for the file input element
+    if (document.querySelector(FILE_INPUT_SELECTOR)) {
+      const pond = FilePond.create(document.querySelector(FILE_INPUT_SELECTOR));
+      pond.on('addfile', (error, file) => {
+        if (error) {
+          console.error('[ERROR] FilePond file add failed', error);
+        } else {
+          console.log('[INFO] File added: ', file.filename);
+        }
+      });
+      console.log('[APPLY JOB] FilePond initialized');
+    } else {
+      console.error('[ERROR] File input not found for FilePond initialization');
+    }
+  }
+
+  function initialize() {
+    const jobId = getJobIdFromUrl();
+
+    if (!jobId) {
+      console.warn('[WARN] No job ID found in URL');
+      return;
+    }
+
+    console.log('[INFO] Found job ID:', jobId);
+
+    // Ensure the file input exists and is ready for FilePond
+    ensureFileInputExists();
+
+    // Initialize FilePond
+    initializeFilePond();
+
+    // Attach the form submit handler
+    const form = document.querySelector(FORM_SELECTOR);
+    if (form) {
+      form.addEventListener('submit', handleFormSubmission);
+      console.log('[APPLY JOB] Form initialized');
+    } else {
+      console.error('[ERROR] No form element found with selector:', FORM_SELECTOR);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initialize);
+  } else {
+    initialize();
+  }
+})();
