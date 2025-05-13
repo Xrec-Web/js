@@ -1,6 +1,9 @@
 (function () {
   console.log('[APPLY JOB] DOM ready, starting script');
 
+  // Global flag to check if everything is initialized
+  let isReady = false;
+
   // Function to handle form submission
   async function handleFormSubmit(e) {
     e.preventDefault();
@@ -103,7 +106,7 @@
     }
   }
 
-  // Wait for FilePond to initialize using its event system
+  // Function to initialize FilePond and bind submit event
   function initializeFilePond() {
     const fileInput = document.querySelector('input[type="file"][name="fileToUpload"]');
     if (fileInput) {
@@ -114,30 +117,46 @@
 
       pond.on('ready', function() {
         console.log('[APPLY JOB] FilePond is ready.');
+
         const formElement = document.querySelector('#wf-form-Form-Apply-Job');
         if (formElement) {
           formElement.addEventListener('submit', handleFormSubmit);
           console.log('[APPLY JOB] Form submit listener bound.');
         }
+
+        // Now that everything is ready, set the isReady flag
+        isReady = true;
+        console.log('[APPLY JOB] All dependencies are ready.');
       });
+    } else {
+      console.warn('[APPLY JOB] File input not found.');
     }
   }
 
-  // Check if FilePond is initialized, if not, initialize it
-  if (!document.querySelector('input[type="file"][name="fileToUpload"]')) {
-    // If the file input is not yet created, initialize it
-    const formElement = document.querySelector('#wf-form-Form-Apply-Job');
-    if (formElement) {
-      const newFileInput = document.createElement('input');
-      newFileInput.setAttribute('type', 'file');
-      newFileInput.setAttribute('name', 'fileToUpload');
-      newFileInput.setAttribute('id', 'fileToUpload');
-      newFileInput.required = true;
-
-      formElement.appendChild(newFileInput);
+  // Function to check if job-detail.js has initialized the job data
+  function checkJobDetailInitialization() {
+    const jobDetailElement = document.querySelector('.job-detail-container'); // Or a more specific selector
+    if (jobDetailElement) {
+      console.log('[APPLY JOB] job-detail.js initialized.');
+      initializeFilePond(); // Initialize FilePond once job details are ready
+    } else {
+      console.warn('[APPLY JOB] Job detail not initialized yet.');
     }
   }
 
-  // Now initialize FilePond
-  initializeFilePond();
+  // Wait for DOMContentLoaded to ensure the page is fully loaded
+  document.addEventListener('DOMContentLoaded', function() {
+    console.log('[APPLY JOB] DOM is fully loaded.');
+
+    // Check if job-detail.js has initialized
+    const interval = setInterval(() => {
+      if (isReady) {
+        clearInterval(interval);  // Stop checking once everything is ready
+        console.log('[APPLY JOB] All dependencies are ready to go.');
+      }
+    }, 200);  // Check every 200ms until everything is ready
+
+    // Call the function to check job-detail.js initialization
+    checkJobDetailInitialization();
+  });
 })();
