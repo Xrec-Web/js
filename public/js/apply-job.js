@@ -11,19 +11,17 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     console.log(`[APPLY JOB] Job ID from URL: ${jobId}`);
 
-    // Start polling for the file input and form
-    const initInterval = setInterval(() => {
+    // Function to initialize form once it's in the DOM
+    const initializeForm = () => {
       const inputElement = document.querySelector('input[type="file"][name="fileToUpload"]');
       const form = document.querySelector('#wf-form-Apply-Job-Form');
-      const applyButton = document.querySelector('.apply-button');
+      const applyButton = document.querySelector('#apply-button'); // Updated to use ID
 
       if (!inputElement || !form || !applyButton) {
-        // Keep waiting until all elements are ready
-        return;
+        return false;
       }
 
-      clearInterval(initInterval); // Stop polling once everything is found
-      console.log('[APPLY JOB] All required elements found. Initializing form.');
+      console.log('[APPLY JOB] All elements found. Initializing FilePond and form handler.');
 
       // Initialize FilePond
       const pond = FilePond.create(inputElement, {
@@ -31,9 +29,6 @@ document.addEventListener('DOMContentLoaded', function () {
         name: 'fileToUpload',
         storeAsFile: true,
       });
-
-      // Attach job ID to button
-      applyButton.setAttribute('data-job-id', jobId);
 
       form.addEventListener('submit', async function (e) {
         e.preventDefault();
@@ -97,6 +92,17 @@ document.addEventListener('DOMContentLoaded', function () {
           applyButton.disabled = false;
         }
       });
-    }, 300); // Check every 300ms
+
+      return true;
+    };
+
+    // Observe modal insertion into DOM
+    const observer = new MutationObserver(() => {
+      if (initializeForm()) {
+        observer.disconnect(); // Stop observing once initialized
+      }
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
   });
 });
