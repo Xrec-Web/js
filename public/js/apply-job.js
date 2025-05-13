@@ -1,8 +1,4 @@
-<!-- FilePond CSS + JS -->
-<link href="https://unpkg.com/filepond/dist/filepond.min.css" rel="stylesheet" />
-<script src="https://unpkg.com/filepond/dist/filepond.min.js"></script>
 
-<script>
   let jobId = '';
 
   // On job button click, open modal and set jobId
@@ -85,4 +81,3 @@
       });
     });
   });
-</script>
